@@ -1,0 +1,141 @@
+@using ReenbitTest.UI.Interfaces
+@using ReenbitTest.UI.Models
+@inject IChatService ChatService
+@inject IUserService UserService
+@inject IAuthService AuthService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isFormValid">
+            <MudTextField @bind-Value="_chatName" 
+                         Label="Chat Name" 
+                         Required="true" 
+                         RequiredError="Chat name is required"
+                         Class="mb-3" />
+                         
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Add Participants</MudText>
+            
+            @if (_isLoadingUsers)
+            {
+                <div class="d-flex justify-center my-2">
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                </div>
+            }
+            else
+            {
+                <MudPaper Elevation="0" Class="pa-2 mb-3" Style="max-height: 200px; overflow-y: auto;">
+                    @foreach (var user in _availableUsers)
+                    {
+                        <MudCheckBox T="bool" @bind-Checked="@_selectedUsers[user.Id]" 
+                                    Label="@user.FullName" 
+                                    Color="Color.Primary"
+                                    Dense="true" />
+                    }
+                </MudPaper>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" 
+                  Disabled="@(!_isFormValid || _isCreating)" 
+                  OnClick="CreateChat">
+            @if (_isCreating)
+            {
+                <MudProgressCircular Class="mr-1" Size="Size.Small" Indeterminate="true" />
+                <span>Creating...</span>
+            }
+            else
+            {
+                <span>Create</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IDialogReference MudDialog { get; set; } = null!;
+    [Parameter] public EventCallback<ChatRoom> OnChatCreated { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isFormValid;
+    private string _chatName = string.Empty;
+    private bool _isLoadingUsers = true;
+    private bool _isCreating = false;
+    private List<User> _availableUsers = new();
+    private Dictionary<string, bool> _selectedUsers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            _isLoadingUsers = true;
+            _availableUsers = await UserService.GetUsersAsync();
+            
+            // Filter out current user
+            _availableUsers = _availableUsers
+                .Where(u => u.Id != AuthService.CurrentUser?.Id)
+                .ToList();
+            
+            // Initialize selected users dictionary
+            foreach (var user in _availableUsers)
+            {
+                _selectedUsers[user.Id] = false;
+            }
+            
+            _isLoadingUsers = false;
+        }
+        catch (Exception ex)
+        {
+            _isLoadingUsers = false;
+            Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CreateChat()
+    {
+        try
+        {
+            await _form.Validate();
+            if (!_isFormValid) return;
+            
+            _isCreating = true;
+            
+            // Get selected user IDs
+            var selectedUserIds = _selectedUsers
+                .Where(kvp => kvp.Value)
+                .Select(kvp => kvp.Key)
+                .ToList();
+            
+            // Add current user to participants
+            if (AuthService.CurrentUser != null)
+            {
+                selectedUserIds.Add(AuthService.CurrentUser.Id);
+            }
+            
+            var createChatRoom = new CreateChatRoom
+            {
+                Name = _chatName,
+                UserIds = selectedUserIds
+            };
+            
+            var newChatRoom = await ChatService.CreateChatRoomAsync(createChatRoom);
+            
+            await OnChatCreated.InvokeAsync(newChatRoom);
+            MudDialog.Close(DialogResult.Ok(newChatRoom));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating chat: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isCreating = false;
+        }
+    }
+}

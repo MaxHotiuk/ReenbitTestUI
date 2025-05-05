@@ -1,16 +1,632 @@
 ﻿@page "/"
+@page "/{ChatId:int?}"
+@using ReenbitTest.UI.Interfaces
+@using ReenbitTest.UI.Models
+@inject IChatService ChatService
+@inject IChatHubService ChatHubService
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 <AuthorizeView>
     <Authorized>
-        <PageTitle>Chats</PageTitle>
-
-        <h1>Hello, world!</h1>
-
-        Welcome to your new app.
-
+        <PageTitle>Chat</PageTitle>
+        <div class="chat-main">
+            @if (_currentChatId.HasValue)
+            {
+                <div class="chat-container">
+                    <div class="chat-header">
+                        @if (_currentChat != null)
+                        {
+                            <MudText Typo="Typo.h6">@_currentChat.Name</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                @_currentChat.Users.Count user@(_currentChat.Users.Count != 1 ? "s" : "")
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudSkeleton Width="150px" Height="20px" />
+                        }
+                    </div>
+                    
+                    <div class="chat-messages" @ref="_messagesContainerRef">
+                        @if (_isLoading)
+                        {
+                            <div class="d-flex justify-center my-4">
+                                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                            </div>
+                        }
+                        else if (_messages.Count == 0)
+                        {
+                            <div class="no-messages-container">
+                                <MudIcon Icon="@Icons.Material.Outlined.ChatBubbleOutline" Size="Size.Large" Class="mb-2" />
+                                <MudText Typo="Typo.body1">No messages yet</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                    Start a conversation by sending a message
+                                </MudText>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="messages-list">
+                                @foreach (var messageGroup in _messages.GroupBy(m => m.SentAt.Date))
+                                {
+                                    <div class="message-date-divider">
+                                        <MudDivider />
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary date-label">
+                                            @GetDateLabel(messageGroup.Key)
+                                        </MudText>
+                                        <MudDivider />
+                                    </div>
+                                    
+                                    @foreach (var message in messageGroup)
+                                    {
+                                        <div class="@GetMessageContainerClass(message)">
+                                            @if (!message.IsCurrentUser)
+                                            {
+                                                <MudAvatar Size="Size.Small" Class="message-avatar">
+                                                    @message.SenderFullName.First()
+                                                </MudAvatar>
+                                            }
+                                            <div class="message-content-container">
+                                                @if (!message.IsCurrentUser)
+                                                {
+                                                    <MudText Typo="Typo.caption" Class="message-sender">
+                                                        @message.SenderFullName
+                                                    </MudText>
+                                                }
+                                                <div class="@GetMessageClass(message)">
+                                                    <MudText Typo="Typo.body2">@message.Content</MudText>
+                                                    <MudText Typo="Typo.caption" Class="message-time">
+                                                        @message.SentAt.ToString("HH:mm")
+                                                    </MudText>
+                                                </div>
+                                                
+                                                @if (!string.IsNullOrEmpty(message.SentimentLabel))
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="@GetSentimentColor(message.SentimentLabel)" 
+                                                            Class="sentiment-chip">
+                                                        @message.SentimentLabel
+                                                    </MudChip>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        }
+                        
+                        @if (_typingUsers.Any())
+                        {
+                            <div class="typing-indicators">
+                                @foreach (var typingInfo in _typingUsers.Where(t => t.Key != AuthService.CurrentUser?.Id))
+                                {
+                                    <div class="typing-indicator">
+                                        <div class="typing-animation">
+                                            <span class="dot"></span>
+                                            <span class="dot"></span>
+                                            <span class="dot"></span>
+                                        </div>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                            <em>@typingInfo.Value is typing...</em>
+                                        </MudText>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="chat-input">
+                        <MudPaper Elevation="0" Class="d-flex align-center px-2">
+                            <MudTextField T="string" 
+                                            Placeholder="Type a message..." 
+                                            DisableUnderLine="true"
+                                            @bind-Value="_messageInput"
+                                            Immediate="true"
+                                            OnKeyDown="HandleKeyDown"
+                                            OnInput="HandleInput"
+                                            FullWidth="true"
+                                            Variant="Variant.Text"
+                                            Class="flex-grow-1" />
+                                            
+                            <MudIconButton Icon="@Icons.Material.Filled.Send" 
+                                            Color="Color.Primary"
+                                            Disabled="@(string.IsNullOrWhiteSpace(_messageInput))"
+                                            OnClick="SendMessage" />
+                        </MudPaper>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="no-chat-selected">
+                    <MudIcon Icon="@Icons.Material.Outlined.Forum" Size="Size.Large" Class="mb-2" />
+                    <MudText Typo="Typo.h6">No chat selected</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                        Select a chat from the sidebar or create a new one
+                    </MudText>
+                </div>
+            }
+        </div>
     </Authorized>
     <NotAuthorized>
         <RedirectToLogin />
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    [Parameter]
+    public int? ChatId { get; set; }
     
+    private int? _currentChatId;
+    private ChatRoom? _currentChat;
+    private List<Message> _messages = new();
+    private string _messageInput = "";
+    private bool _isLoading = false;
+    private ElementReference _messagesContainerRef;
+    private Dictionary<string, string> _typingUsers = new();
+    private Timer? _typingTimer;
+    private DateTime _lastTypingNotification = DateTime.MinValue;
+    private bool _isTyping = false;
+    private bool _scrollToBottomPending = false;
+    private bool _connectionInitialized = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await InitializeHub();
+        await LoadChatIfIdPresent();
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ChatId != _currentChatId && ChatId.HasValue)
+        {
+            await LoadChat(ChatId.Value);
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_scrollToBottomPending)
+        {
+            await ScrollToBottom();
+            _scrollToBottomPending = false;
+        }
+    }
+    
+    private async Task InitializeHub()
+    {
+        if (_connectionInitialized)
+            return;
+            
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+                return;
+
+            await ChatHubService.StartConnectionAsync(token);
+            
+            ChatHubService.OnReceiveMessage += HandleReceiveMessage;
+            ChatHubService.OnUserTyping += HandleUserTyping;
+            ChatHubService.OnUserStoppedTyping += HandleUserStoppedTyping;
+            ChatHubService.OnError += HandleError;
+            
+            _connectionInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error connecting to chat: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task LoadChatIfIdPresent()
+    {
+        if (ChatId.HasValue)
+        {
+            await LoadChat(ChatId.Value);
+        }
+    }
+    
+    private async Task LoadChat(int chatId)
+    {
+        _isLoading = true;
+        _currentChatId = chatId;
+        
+        try
+        {
+            // Load chat room details
+            _currentChat = await ChatService.GetChatRoomAsync(chatId);
+            
+            // Join chat hub group if connected
+            if (ChatHubService.IsConnected)
+            {
+                await ChatHubService.JoinChatRoomAsync(chatId);
+            }
+            
+            // Load messages
+            _messages = await ChatService.GetMessagesForChatRoomAsync(chatId);
+            
+            _isLoading = false;
+            _scrollToBottomPending = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _isLoading = false;
+            Snackbar.Add($"Error loading chat: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private void HandleChatSelected(int chatId)
+    {
+        // No need to do anything here as the parameter binding will trigger OnParametersSetAsync
+    }
+    
+    private void HandleReceiveMessage(Message message)
+    {
+        if (_currentChatId == message.ChatRoomId)
+        {
+            // Add message to list
+            _messages.Add(message);
+            
+            // Clear typing indicator for user
+            if (_typingUsers.ContainsKey(message.SenderUserName))
+            {
+                _typingUsers.Remove(message.SenderUserName);
+            }
+            
+            _scrollToBottomPending = true;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    private void HandleUserTyping(UserTypingInfo typingInfo)
+    {
+        if (_currentChatId == typingInfo.ChatRoomId && typingInfo.UserId != AuthService.CurrentUser?.Id)
+        {
+            _typingUsers[typingInfo.UserId] = typingInfo.UserName;
+            
+            // Set a timer to remove typing indicator after 3 seconds
+            if (_typingTimer != null)
+            {
+                _typingTimer.Dispose();
+            }
+            
+            _typingTimer = new Timer(_ => 
+            {
+                _typingUsers.Remove(typingInfo.UserId);
+                InvokeAsync(StateHasChanged);
+            }, null, 3000, Timeout.Infinite);
+            
+            InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    private void HandleUserStoppedTyping(UserTypingInfo typingInfo)
+    {
+        if (_currentChatId == typingInfo.ChatRoomId && _typingUsers.ContainsKey(typingInfo.UserId))
+        {
+            _typingUsers.Remove(typingInfo.UserId);
+            InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    private void HandleError(string error)
+    {
+        Snackbar.Add(error, Severity.Error);
+    }
+    
+    private async Task HandleInput(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString() ?? "";
+        
+        // Send typing notification
+        if (_currentChatId.HasValue && !string.IsNullOrWhiteSpace(input) && !_isTyping)
+        {
+            _isTyping = true;
+            await SendTypingNotification();
+        }
+        else if (_currentChatId.HasValue && string.IsNullOrWhiteSpace(input) && _isTyping)
+        {
+            _isTyping = false;
+            await SendStoppedTypingNotification();
+        }
+    }
+    
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey && !string.IsNullOrWhiteSpace(_messageInput))
+        {
+            await SendMessage();
+        }
+    }
+    
+    private async Task SendMessage()
+    {
+        if (_currentChatId.HasValue && !string.IsNullOrWhiteSpace(_messageInput))
+        {
+            try
+            {
+                var message = new CreateMessage
+                {
+                    Content = _messageInput.Trim(),
+                    ChatRoomId = _currentChatId.Value
+                };
+                
+                await ChatHubService.SendMessageAsync(message);
+                
+                // Clear input and typing state
+                _messageInput = "";
+                _isTyping = false;
+                await SendStoppedTypingNotification();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error sending message: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+    
+    private async Task SendTypingNotification()
+    {
+        if (_currentChatId.HasValue && ChatHubService.IsConnected)
+        {
+            // Limit typing notifications to prevent flooding
+            var now = DateTime.Now;
+            if ((now - _lastTypingNotification).TotalSeconds < 2)
+            {
+                return;
+            }
+            
+            _lastTypingNotification = now;
+            await ChatHubService.NotifyUserTypingAsync(_currentChatId.Value);
+        }
+    }
+    
+    private async Task SendStoppedTypingNotification()
+    {
+        if (_currentChatId.HasValue && ChatHubService.IsConnected)
+        {
+            await ChatHubService.NotifyUserStoppedTypingAsync(_currentChatId.Value);
+        }
+    }
+    
+    private async Task ScrollToBottom()
+    {
+        // Use JS interop to scroll to bottom
+        try
+        {
+            await JS.InvokeVoidAsync("scrollToBottom", _messagesContainerRef);
+        }
+        catch
+        {
+            // Ignore JS interop errors
+        }
+    }
+    
+    private string GetMessageContainerClass(Message message)
+    {
+        return message.IsCurrentUser ? "message-container own-message" : "message-container";
+    }
+    
+    private string GetMessageClass(Message message)
+    {
+        return message.IsCurrentUser ? "message own" : "message";
+    }
+    
+    private string GetDateLabel(DateTime date)
+    {
+        if (date.Date == DateTime.Today)
+        {
+            return "Today";
+        }
+        else if (date.Date == DateTime.Today.AddDays(-1))
+        {
+            return "Yesterday";
+        }
+        else if ((DateTime.Today - date.Date).TotalDays < 7)
+        {
+            return date.ToString("dddd");
+        }
+        else
+        {
+            return date.ToString("MMMM d, yyyy");
+        }
+    }
+    
+    private Color GetSentimentColor(string sentiment)
+    {
+        return sentiment?.ToLower() switch
+        {
+            "positive" => Color.Success,
+            "negative" => Color.Error,
+            "neutral" => Color.Default,
+            _ => Color.Default
+        };
+    }
+    
+    public void Dispose()
+    {
+        _typingTimer?.Dispose();
+        
+        if (_connectionInitialized)
+        {
+            ChatHubService.OnReceiveMessage -= HandleReceiveMessage;
+            ChatHubService.OnUserTyping -= HandleUserTyping;
+            ChatHubService.OnUserStoppedTyping -= HandleUserStoppedTyping;
+            ChatHubService.OnError -= HandleError;
+        }
+    }
+}
+
+<style>
+    .chat-layout {
+        height: calc(100vh - 64px); /* Adjust based on your app bar height */
+        width: 100%;
+    }
+    
+    .chat-sidebar {
+        width: 300px;
+        border-right: 1px solid var(--mud-palette-lines-default);
+    }
+    
+    .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    
+    .chat-header {
+        position: relative;
+        padding: 16px;
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+    }
+    
+    .chat-messages {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .no-messages-container,
+    .no-chat-selected {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--mud-palette-text-secondary);
+    }
+    
+    .messages-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .message-date-divider {
+        display: flex;
+        align-items: center;
+        margin: 12px 0;
+    }
+    
+    .date-label {
+        padding: 0 12px;
+        white-space: nowrap;
+    }
+    
+    .message-container {
+        display: flex;
+        margin-bottom: 8px;
+        align-items: flex-start;
+    }
+    
+    .own-message {
+        flex-direction: row-reverse;
+    }
+    
+    .message-avatar {
+        margin-right: 8px;
+        margin-top: 4px;
+    }
+    
+    .own-message .message-avatar {
+        display: none;
+    }
+    
+    .message-content-container {
+        display: flex;
+        flex-direction: column;
+        max-width: 70%;
+    }
+    
+    .message {
+        padding: 8px 12px;
+        border-radius: 12px;
+        background-color: var(--mud-palette-background-grey);
+        position: relative;
+    }
+    
+    .message.own {
+        background-color: var(--mud-palette-primary-lighten);
+        color: var(--mud-palette-primary-darken);
+    }
+    
+    .message-sender {
+        margin-bottom: 2px;
+        font-weight: 500;
+    }
+    
+    .message-time {
+        font-size: 0.7rem;
+        opacity: 0.7;
+        text-align: right;
+        margin-top: 2px;
+    }
+    
+    .sentiment-chip {
+        align-self: flex-start;
+        margin-top: 4px;
+        height: 20px;
+    }
+    
+    .chat-input {
+        padding: 12px;
+        border-top: 1px solid var(--mud-palette-lines-default);
+    }
+    
+    .typing-indicators {
+        padding: 4px 0;
+    }
+    
+    .typing-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .typing-animation {
+        display: flex;
+        gap: 3px;
+    }
+    
+    .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: var(--mud-palette-text-secondary);
+        animation: typing 1.5s infinite ease-in-out;
+    }
+    
+    .dot:nth-child(1) {
+        animation-delay: 0s;
+    }
+    
+    .dot:nth-child(2) {
+        animation-delay: 0.3s;
+    }
+    
+    .dot:nth-child(3) {
+        animation-delay: 0.6s;
+    }
+    
+    @@keyframes typing {
+        0%, 60%, 100% {
+            transform: translateY(0);
+        }
+        30% {
+            transform: translateY(-4px);
+        }
+    }
+</style>

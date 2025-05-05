@@ -1,10 +1,14 @@
-﻿@inject NavigationManager NavigationManager
+﻿@using ReenbitTest.UI.Interfaces
+@inject NavigationManager NavigationManager
+@inject IAuthService AuthService
 
 <div class="nav-container d-flex flex-column h-100">
     <!-- App Logo and Title Section -->
     <div class="d-flex flex-row align-center px-4 py-2">
         <MudText Typo="Typo.h5" Color="Color.Primary" Class="ml-2" Style="padding-top: 10px;">ReenbitTest</MudText>
     </div>
+
+    <ContentContainer ActiveSection="@ActiveSection" />
     
     <MudDivider Class="my-2" />
     
@@ -18,15 +22,15 @@
                     <div class="d-flex flex-row justify-space-between align-center">
                         <MudTooltip Text="Chats">
                             <MudIconButton Icon="fas fa-comment" 
-                                Color="Color.Primary" 
-                                Href="/"
+                                Color="@(ActiveSection == NavSection.Chats ? Color.Secondary : Color.Primary)" 
+                                OnClick="@(() => ChangeActiveSection(NavSection.Chats))"
                                 Class="flex-1" />
                         </MudTooltip>
                         
                         <MudTooltip Text="Profile">
                             <MudIconButton Icon="@Icons.Material.Filled.Person" 
-                                Color="Color.Primary" 
-                                Href="/profile"
+                                Color="@(ActiveSection == NavSection.Profile ? Color.Secondary : Color.Primary)" 
+                                OnClick="@(() => ChangeActiveSection(NavSection.Profile))"
                                 Class="flex-1" />
                         </MudTooltip>
                         
@@ -83,6 +87,11 @@
     .flex-1 {
         flex: 1;
     }
+
+    .mud-nav-link-active {
+        background-color: var(--mud-palette-action-default-hover);
+        border-radius: var(--mud-default-borderradius);
+    }
 </style>
 
 @code {
@@ -94,6 +103,12 @@
     
     [Parameter]
     public EventCallback OnLogout { get; set; }
+
+    [Parameter]
+    public NavSection ActiveSection { get; set; } = NavSection.Chats;
+
+    [Parameter]
+    public EventCallback<NavSection> ActiveSectionChanged { get; set; }
     
     private bool _isDarkMode => IsDarkMode;
     
@@ -105,5 +120,17 @@
     private async Task LogoutUser()
     {
         await OnLogout.InvokeAsync();
+    }
+
+    private async Task ChangeActiveSection(NavSection section)
+    {
+        ActiveSection = section;
+        await ActiveSectionChanged.InvokeAsync(section);
+    }
+
+    public enum NavSection
+    {
+        Chats,
+        Profile
     }
 }

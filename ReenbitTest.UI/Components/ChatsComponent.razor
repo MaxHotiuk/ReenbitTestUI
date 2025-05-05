@@ -1,0 +1,324 @@
+@using ReenbitTest.UI.Interfaces
+@using ReenbitTest.UI.Models
+@inject IChatService ChatService
+@inject IChatHubService ChatHubService
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<div class="chats-sidebar">
+    <div class="d-flex justify-space-between align-center px-2 mb-2">
+        <MudText Typo="Typo.h6" Class="mud-text-truncate">Chats</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                      Size="Size.Small"
+                      Color="Color.Primary" 
+                      OnClick="OpenNewChatDialog" />
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-center my-4">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+        </div>
+    }
+    else if (_chatRooms.Count == 0)
+    {
+        <MudText Typo="Typo.caption" Class="px-2 text-center mud-text-secondary">
+            No chats yet. Start a new conversation.
+        </MudText>
+    }
+    else
+    {
+        <div class="chat-list">
+            @foreach (var chat in _chatRooms)
+            {
+                <a href="/@chat.Id" style="text-decoration: none;">
+                    <MudPaper Elevation="0" 
+                        Class="@GetChatItemClass(chat.Id)" 
+                        Style="cursor: pointer;">
+                        <div class="d-flex flex-column py-2 px-2">
+                            <div class="d-flex justify-space-between align-center">
+                                <MudText Typo="Typo.body2" Class="mud-text-truncate" Style="max-width: 80%;">
+                                    @chat.Name
+                                </MudText>
+                                @if (_unreadMessages.TryGetValue(chat.Id, out var unread) && unread > 0)
+                                {
+                                    <MudBadge Color="Color.Secondary" Content="@unread" Overlap="true" Max="99">
+                                        <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" />
+                                    </MudBadge>
+                                }
+                            </div>
+                            @if (_lastMessages.TryGetValue(chat.Id, out var message))
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-truncate text-muted">
+                                    @GetLastMessagePreview(message)
+                                </MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-truncate text-muted">
+                                    No messages yet
+                                </MudText>
+                            }
+                        </div>
+                    </MudPaper>
+                </a>
+            }
+        </div>
+    }
+
+    @if (_typingUsers.Any())
+    {
+        <div class="typing-indicators px-2 mt-2">
+            @foreach (var typingInfo in _typingUsers)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    <em>@typingInfo.Value is typing...</em>
+                </MudText>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<int> OnChatSelected { get; set; }
+
+    private bool _isLoading = true;
+    private List<ChatRoom> _chatRooms = new();
+    private Dictionary<int, Message> _lastMessages = new();
+    private Dictionary<int, int> _unreadMessages = new();
+    private Dictionary<string, string> _typingUsers = new();
+    private int? _selectedChatId;
+    private Timer? _typingTimer;
+    private bool _connectionInitialized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChatRooms();
+
+        // Check URL for chat ID
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (int.TryParse(uri.AbsolutePath.Trim('/'), out var chatId))
+        {
+            await SelectChat(_chatRooms.FirstOrDefault(c => c.Id == chatId));
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AuthService.IsAuthenticated && !_connectionInitialized)
+        {
+            await InitializeHubConnection();
+        }
+    }
+
+    private async Task InitializeHubConnection()
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+                return;
+
+            await ChatHubService.StartConnectionAsync(token);
+            
+            ChatHubService.OnReceiveMessage += HandleReceiveMessage;
+            ChatHubService.OnUserTyping += HandleUserTyping;
+            ChatHubService.OnUserStoppedTyping += HandleUserStoppedTyping;
+            ChatHubService.OnError += HandleError;
+
+            _connectionInitialized = true;
+
+            // Join all chat rooms
+            foreach (var chat in _chatRooms)
+            {
+                await ChatHubService.JoinChatRoomAsync(chat.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error connecting to chat service: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void HandleReceiveMessage(Message message)
+    {
+        _lastMessages[message.ChatRoomId] = message;
+        
+        // If message is not from current user and not in the currently selected chat
+        if (!message.IsCurrentUser && _selectedChatId != message.ChatRoomId)
+        {
+            if (!_unreadMessages.TryGetValue(message.ChatRoomId, out var count))
+            {
+                count = 0;
+            }
+            _unreadMessages[message.ChatRoomId] = count + 1;
+        }
+        
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleUserTyping(UserTypingInfo typingInfo)
+    {
+        if (typingInfo.UserId != AuthService.CurrentUser?.Id)
+        {
+            _typingUsers[typingInfo.UserId] = typingInfo.UserName;
+            InvokeAsync(StateHasChanged);
+            
+            // Clear typing indicator after 3 seconds of inactivity
+            _typingTimer?.Dispose();
+            _typingTimer = new Timer(_ => 
+            {
+                _typingUsers.Remove(typingInfo.UserId);
+                InvokeAsync(StateHasChanged);
+            }, null, 3000, Timeout.Infinite);
+        }
+    }
+
+    private void HandleUserStoppedTyping(UserTypingInfo typingInfo)
+    {
+        if (_typingUsers.ContainsKey(typingInfo.UserId))
+        {
+            _typingUsers.Remove(typingInfo.UserId);
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleError(string error)
+    {
+        Snackbar.Add(error, Severity.Error);
+    }
+
+    private async Task LoadChatRooms()
+    {
+        try
+        {
+            _isLoading = true;
+            _chatRooms = await ChatService.GetChatRoomsAsync();
+            
+            // Load last message for each chat
+            foreach (var chat in _chatRooms)
+            {
+                var messages = await ChatService.GetMessagesForChatRoomAsync(chat.Id, 1, 1);
+                if (messages.Count > 0)
+                {
+                    _lastMessages[chat.Id] = messages[0];
+                }
+            }
+            
+            _isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            _isLoading = false;
+            Snackbar.Add($"Error loading chats: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SelectChat(ChatRoom? chat)
+    {
+        if (chat == null || chat.Id == _selectedChatId) return;
+        
+        _selectedChatId = chat.Id;
+        
+        // Clear unread count for this chat
+        _unreadMessages[chat.Id] = 0;
+        
+        // Navigate to the chat page with the chat ID
+        NavigationManager.NavigateTo($"/{chat.Id}");
+        
+        await OnChatSelected.InvokeAsync(chat.Id);
+        StateHasChanged(); // Force UI update
+    }
+
+    private string GetChatItemClass(int chatId)
+    {
+        var baseClass = "chat-item mb-1";
+        return chatId == _selectedChatId ? $"{baseClass} selected-chat" : baseClass;
+    }
+
+    private string GetLastMessagePreview(Message message)
+    {
+        var senderPrefix = message.IsCurrentUser ? "You: " : $"{message.SenderUserName}: ";
+        return $"{senderPrefix}{message.Content}";
+    }
+
+    private async Task OpenNewChatDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, CloseButton = true };
+        var parameters = new DialogParameters
+        {
+            { "OnChatCreated", EventCallback.Factory.Create<ChatRoom>(this, OnChatCreated) }
+        };
+        
+        // Use Show instead of ShowAsync to properly handle the dialog reference
+        await DialogService.ShowAsync<NewChatDialog>("New Chat", parameters, options);
+    }
+
+    private async Task OnChatCreated(ChatRoom chatRoom)
+    {
+        // Add new chat to list
+        _chatRooms.Add(chatRoom);
+        
+        // Join the chat room
+        if (ChatHubService.IsConnected)
+        {
+            await ChatHubService.JoinChatRoomAsync(chatRoom.Id);
+        }
+        
+        // Select the new chat
+        await SelectChat(chatRoom);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _typingTimer?.Dispose();
+        
+        if (_connectionInitialized)
+        {
+            ChatHubService.OnReceiveMessage -= HandleReceiveMessage;
+            ChatHubService.OnUserTyping -= HandleUserTyping;
+            ChatHubService.OnUserStoppedTyping -= HandleUserStoppedTyping;
+            ChatHubService.OnError -= HandleError;
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+<style>
+    .chats-sidebar {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow-y: hidden;
+    }
+
+    .chat-list {
+        overflow-y: auto;
+        flex-grow: 1;
+    }
+
+    .chat-item {
+        transition: background-color 0.2s ease;
+    }
+
+    .chat-item:hover {
+        background-color: rgba(var(--mud-palette-primary-rgb), 0.05);
+    }
+
+    .selected-chat {
+        background-color: rgba(var(--mud-palette-primary-rgb), 0.1);
+        border-left: 2px solid var(--mud-palette-primary);
+    }
+
+    .text-muted {
+        opacity: 0.7;
+    }
+
+    .typing-indicators {
+        min-height: 1.5rem;
+    }
+</style>

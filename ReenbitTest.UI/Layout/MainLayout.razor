@@ -33,10 +33,11 @@ else
         <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Never"
                    Elevation="2" Variant="@_drawerVariant" Style="width: 280px;">
             <NavMenu 
-                
                 IsDarkMode="@_isDarkMode" 
                 IsDarkModeChanged="DarkModeToggle"
-                OnLogout="LogoutUser" />
+                OnLogout="LogoutUser"
+                ActiveSection="@_activeSection" 
+                ActiveSectionChanged="@HandleSectionChanged" />
         </MudDrawer>
         
         <MudMainContent Class="pt-4 px-4">
@@ -90,6 +91,7 @@ else
     private bool _isLoaded = false;
     private MudTheme? _theme = null;
     private DrawerVariant _drawerVariant = DrawerVariant.Responsive;
+    private ReenbitTest.UI.Layout.NavMenu.NavSection _activeSection = ReenbitTest.UI.Layout.NavMenu.NavSection.Chats;
 
     protected override async Task OnInitializedAsync()
     {
@@ -190,6 +192,12 @@ else
     {
         await AuthService.Logout();
         NavigationManager.NavigateTo("/");
+    }
+
+    private void HandleSectionChanged(ReenbitTest.UI.Layout.NavMenu.NavSection section)
+    {
+        _activeSection = section;
+        StateHasChanged();
     }
 
     private readonly PaletteLight _lightPalette = new()

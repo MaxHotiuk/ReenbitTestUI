@@ -102,5 +102,10 @@ namespace ReenbitTest.UI.Services
                 ((ApiAuthenticationStateProvider)_authStateProvider).MarkUserAsAuthenticated(user);
             }
         }
+
+        public async Task<string?> GetTokenAsync()
+        {
+            return await _localStorage.GetItemAsync<string>(_authTokenKey);
+        }
     }
 }

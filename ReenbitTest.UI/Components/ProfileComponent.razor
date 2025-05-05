@@ -1,0 +1,138 @@
+@using ReenbitTest.UI.Models
+@inject ReenbitTest.UI.Interfaces.IAuthService AuthService
+@inject ReenbitTest.UI.Interfaces.IUserService UserService
+@inject ISnackbar Snackbar
+
+<div class="profile-container">
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-center my-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </div>
+    }
+    else
+    {
+        <MudPaper Elevation="0" Class="pa-2 pa-sm-4">
+            <div class="profile-avatar-section d-flex justify-center text-center">
+                <MudAvatar Color="Color.Primary" Size="Size.Large" Style="width: 100px; height: 100px; font-size: 2rem;" Class="mb-2">
+                    @_userInitials
+                </MudAvatar>
+            </div>
+            <div class="d-flex flex-column gap-4 mb-4">
+                <div class="profile-info-section">
+                    <div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-4 gap-2">
+                        <MudText Typo="Typo.h5" Class="mb-2 mb-sm-0">@_user?.FirstName @_user?.LastName</MudText>
+                        <MudButton Variant="Variant.Filled" 
+                                  Color="Color.Primary" 
+                                  EndIcon="@Icons.Material.Filled.Edit"
+                                  Size="Size.Small"
+                                  OnClick="@(() => UpdateProfile())">
+                        </MudButton>
+                    </div>
+                    <div class="profile-details">
+                        <div class="profile-detail-item">
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">Username</MudText>
+                            <MudText Typo="Typo.body1">@_user?.UserName</MudText>
+                        </div>
+                        
+                        <div class="profile-detail-item">
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">Email</MudText>
+                            <MudText Typo="Typo.body1">@_user?.Email</MudText>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </MudPaper>
+    }
+</div>
+
+<style>
+    .profile-container {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 8px;
+    }
+    
+    .profile-detail-item {
+        margin-bottom: 12px;
+    }
+    
+    .profile-detail-item:last-child {
+        margin-bottom: 0;
+    }
+
+    @@media (min-width: 600px) {
+        .profile-container {
+            padding: 0;
+        }
+    }
+</style>
+
+@code {
+    private bool _isLoading = true;
+    private User? _user;
+    private string _userInitials = "";
+    private bool _editMode = false;
+    private bool _showCurrentPassword = false;
+    private bool _showNewPassword = false;
+    private bool _showConfirmPassword = false;
+    private bool _twoFactorEnabled = false;
+    private string _verificationCode = "";
+    private bool _deleteAccountDialogOpen = false;
+    private string _deleteAccountPassword = "";
+    
+    private DialogOptions dialogOptions = new() 
+    { 
+        CloseOnEscapeKey = true,
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true
+    };
+    
+    protected override void OnInitialized()
+    {
+        LoadUserData();
+    }
+    
+    private void LoadUserData()
+    {
+        _isLoading = true;
+        
+        try 
+        {
+            _user = AuthService.CurrentUser;
+            
+            if (_user != null)
+            {
+                // Calculate user initials
+                _userInitials = string.Empty;
+                
+                if (!string.IsNullOrWhiteSpace(_user.FirstName) && _user.FirstName.Length > 0)
+                {
+                    _userInitials += _user.FirstName[0];
+                }
+                
+                if (!string.IsNullOrWhiteSpace(_user.LastName) && _user.LastName.Length > 0)
+                {
+                    _userInitials += _user.LastName[0];
+                }
+                
+                _userInitials = _userInitials.ToUpper();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading user data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+    
+    private void UpdateProfile()
+    {
+        Snackbar.Add("Coming soon", Severity.Info);
+    }
+}

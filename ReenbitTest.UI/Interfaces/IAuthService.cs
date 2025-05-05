@@ -11,5 +11,6 @@ namespace ReenbitTest.UI.Interfaces
         User? CurrentUser { get; }
         string? AuthToken { get; }
         Task InitializeAuthState();
+        Task<string?> GetTokenAsync();
     }
 }

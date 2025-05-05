@@ -1,0 +1,19 @@
+@using ReenbitTest.UI.Layout
+@using ReenbitTest.UI.Components
+
+<div class="content-container">
+    @switch (ActiveSection)
+    {
+        case ReenbitTest.UI.Layout.NavMenu.NavSection.Chats:
+            <ChatsComponent />
+            break;
+        case ReenbitTest.UI.Layout.NavMenu.NavSection.Profile:
+            <ProfileComponent />
+            break;
+    }
+</div>
+
+@code {
+    [Parameter]
+    public ReenbitTest.UI.Layout.NavMenu.NavSection ActiveSection { get; set; } = ReenbitTest.UI.Layout.NavMenu.NavSection.Chats;
+}
