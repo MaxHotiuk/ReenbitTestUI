@@ -1,0 +1,109 @@
+﻿@inject NavigationManager NavigationManager
+
+<div class="nav-container d-flex flex-column h-100">
+    <!-- App Logo and Title Section -->
+    <div class="d-flex flex-row align-center px-4 py-2">
+        <MudText Typo="Typo.h5" Color="Color.Primary" Class="ml-2" Style="padding-top: 10px;">ReenbitTest</MudText>
+    </div>
+    
+    <MudDivider Class="my-2" />
+    
+    <!-- User and Theme Controls Section - Bottom -->
+    <div class="mt-auto">
+        <MudDivider Class="mb-2" />
+        
+        <div class="px-4 py-2">
+            <AuthorizeView>
+                <Authorized>
+                    <div class="d-flex flex-row justify-space-between align-center">
+                        <MudTooltip Text="Chats">
+                            <MudIconButton Icon="fas fa-comment" 
+                                Color="Color.Primary" 
+                                Href="/"
+                                Class="flex-1" />
+                        </MudTooltip>
+                        
+                        <MudTooltip Text="Profile">
+                            <MudIconButton Icon="@Icons.Material.Filled.Person" 
+                                Color="Color.Primary" 
+                                Href="/profile"
+                                Class="flex-1" />
+                        </MudTooltip>
+                        
+                        <MudTooltip Text="Logout">
+                            <MudIconButton Icon="fas fa-sign-out-alt" 
+                                Color="Color.Primary" 
+                                OnClick="LogoutUser"
+                                Class="flex-1" />
+                        </MudTooltip>
+                        
+                        <MudTooltip Text="@(_isDarkMode ? "Light Mode" : "Dark Mode")">
+                            <MudIconButton Icon="@(_isDarkMode ? "fas fa-sun" : "fas fa-moon")" 
+                                Color="Color.Primary" 
+                                OnClick="@DarkModeToggle" 
+                                Class="flex-1" />
+                        </MudTooltip>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="d-flex flex-row justify-space-between align-center">
+                        <MudTooltip Text="Login">
+                            <MudIconButton Icon="fas fa-sign-in-alt" 
+                                Color="Color.Primary" 
+                                Href="/login"
+                                Class="flex-1" />
+                        </MudTooltip>
+                        
+                        <MudTooltip Text="Register">
+                            <MudIconButton Icon="fas fa-user-plus" 
+                                Color="Color.Primary" 
+                                Href="/register"
+                                Class="flex-1" />
+                        </MudTooltip>
+                        
+                        <MudTooltip Text="@(_isDarkMode ? "Light Mode" : "Dark Mode")">
+                            <MudIconButton Icon="@(_isDarkMode ? "fas fa-sun" : "fas fa-moon")" 
+                                Color="Color.Primary" 
+                                OnClick="@DarkModeToggle" 
+                                Class="flex-1" />
+                        </MudTooltip>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</div>
+
+<style>
+    .nav-container {
+        height: 100%;
+        overflow-y: auto;
+    }
+    
+    .flex-1 {
+        flex: 1;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public bool IsDarkMode { get; set; }
+    
+    [Parameter]
+    public EventCallback<bool> IsDarkModeChanged { get; set; }
+    
+    [Parameter]
+    public EventCallback OnLogout { get; set; }
+    
+    private bool _isDarkMode => IsDarkMode;
+    
+    private async Task DarkModeToggle()
+    {
+        await IsDarkModeChanged.InvokeAsync(!_isDarkMode);
+    }
+    
+    private async Task LogoutUser()
+    {
+        await OnLogout.InvokeAsync();
+    }
+}

@@ -1,0 +1,289 @@
+﻿@inherits LayoutComponentBase
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+@using Microsoft.AspNetCore.Components.Authorization
+@using ReenbitTest.UI.Interfaces
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+@if (!_isLoaded)
+{
+    <MudThemeProvider Theme="@_theme" IsDarkMode="@_isDarkMode" />
+    <div class="loading-screen">
+        <MudIcon Icon="@Icons.Material.Filled.Chat" Color="Color.Primary" Size="Size.Large" />
+        <MudText Typo="Typo.h4" Color="Color.Primary" Class="my-4">Loading ReenbitTest</MudText>
+        <MudProgressLinear Color="Color.Primary" Striped="true" Rounded="true" Indeterminate="true" Size="Size.Medium" Class="my-7" Style="width: 30%;" />
+    </div>
+}
+else
+{
+    <MudThemeProvider Theme="@_theme" IsDarkMode="@_isDarkMode" />
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
+    <MudLayout>
+        <!-- Mobile Top AppBar - Only visible on small screens -->
+        <MudAppBar Elevation="1" Dense="true" Fixed="true" Class="d-flex d-sm-none">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle" />
+            <MudIcon Icon="@Icons.Material.Filled.Chat" Color="Color.Inherit" Size="Size.Medium" Class="ml-2" />
+            <MudText Typo="Typo.h6" Class="ml-2">ReenbitTest</MudText>
+        </MudAppBar>
+        
+        <!-- Left Drawer - Always open on desktop, toggleable on mobile -->
+        <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Never"
+                   Elevation="2" Variant="@_drawerVariant" Style="width: 280px;">
+            <NavMenu 
+                
+                IsDarkMode="@_isDarkMode" 
+                IsDarkModeChanged="DarkModeToggle"
+                OnLogout="LogoutUser" />
+        </MudDrawer>
+        
+        <MudMainContent Class="pt-4 px-4">
+            <!-- Add top padding only on mobile to account for the AppBar -->
+            <div class="@(_drawerVariant == DrawerVariant.Responsive ? "pt-7 d-block d-sm-none" : "")">
+                @Body
+            </div>
+            <div class="@(_drawerVariant == DrawerVariant.Responsive ? "d-none d-sm-block" : "")">
+                @Body
+            </div>
+        </MudMainContent>
+    </MudLayout>
+
+    <div id="blazor-error-ui" data-nosnippet>
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
+}
+
+<style>
+    .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: var(--mud-palette-background);
+        z-index: 1000;
+    }
+    
+    @@media (min-width: 600px) {
+        .mud-drawer {
+            position: fixed !important;
+            height: 100vh;
+        }
+        
+        .mud-main-content {
+            margin-left: 280px;
+        }
+    }
+</style>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDarkMode = true;
+    private bool _isLoaded = false;
+    private MudTheme? _theme = null;
+    private DrawerVariant _drawerVariant = DrawerVariant.Responsive;
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+
+        _theme = new()
+        {
+            PaletteLight = _lightPalette,
+            PaletteDark = _darkPalette,
+            LayoutProperties = new LayoutProperties()
+            {
+                DefaultBorderRadius = "12px",
+                DrawerWidthLeft = "280px",
+                DrawerWidthRight = "280px",
+                AppbarHeight = "64px",
+            },
+            Typography = new Typography()
+            {
+                Default =
+                {
+                    FontFamily = new[] { "Ubuntu", "sans-serif" },
+                    FontSize = "0.875rem",
+                    LineHeight = "1.5"
+                },
+                H1 = 
+                {
+                    FontFamily = new[] { "Ubuntu", "sans-serif" },
+                    FontSize = "2.5rem",
+                    FontWeight = "500"
+                },
+                H2 = 
+                {
+                    FontFamily = new[] { "Ubuntu", "sans-serif" },
+                    FontSize = "2rem",
+                    FontWeight = "500"
+                },
+                Button = 
+                {
+                    FontFamily = new[] { "Ubuntu", "sans-serif" },
+                    FontSize = "0.875rem",
+                    FontWeight = "500"
+                }
+            }
+        };
+
+        if (OperatingSystem.IsBrowser())
+        {
+            var storedTheme = await localStorage.GetItemAsync<bool?>("isDarkMode");
+            if (storedTheme.HasValue)
+            {
+                _isDarkMode = storedTheme.Value;
+            }
+
+            // On mobile, start with drawer closed
+            var windowWidth = await JSRuntime!.InvokeAsync<int>("getWindowWidth");
+            if (windowWidth < 600)
+            {
+                _drawerOpen = false;
+            }
+            else
+            {
+                // On desktop, always start with drawer open
+                _drawerOpen = true;
+            }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(500);
+            _isLoaded = true;
+            
+            // Initialize authentication state from local storage
+            await AuthService.InitializeAuthState();
+            
+            StateHasChanged();
+        }
+    }
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private async Task DarkModeToggle()
+    {
+        _isDarkMode = !_isDarkMode;
+        
+        if (OperatingSystem.IsBrowser())
+        {
+            await localStorage.SetItemAsync("isDarkMode", _isDarkMode);
+        }
+    }
+    
+    private async Task LogoutUser()
+    {
+        await AuthService.Logout();
+        NavigationManager.NavigateTo("/");
+    }
+
+    private readonly PaletteLight _lightPalette = new()
+    {
+        // Main colors from palette
+        Primary = "#1b4332",      // Dark forest green
+        Secondary = "#2d6a4f",    // Medium forest green
+        Tertiary = "#40916c",     // Light forest green
+        
+        // Background colors
+        Background = "#ffffff",   // White
+        Surface = "#ffffff",      // White
+        BackgroundGray = "#f8f9fa",
+        
+        // Appbar
+        AppbarText = "#ffffff",   // White text for better contrast
+        AppbarBackground = "#1b4332", // Dark forest green background
+        
+        // Drawer
+        DrawerBackground = "#ffffff",
+        DrawerText = "#000000",   // Black text
+        DrawerIcon = "#1b4332",   // Dark forest green icons
+        
+        // Text colors
+        TextPrimary = "#000000",  // Black
+        TextSecondary = "#1b4332", // Dark forest green
+        Black = "#000000",
+        White = "#ffffff",
+        
+        // Gray variants
+        GrayLight = "#e5e5e5",    // Light gray
+        GrayLighter = "#f5f5f5",  // Lighter gray
+        
+        // Status colors
+        Info = "#2d6a4f",         // Medium forest green
+        Error = "#d32f2f",        // Red (kept for visibility)
+        Success = "#1b4332",      // Dark forest green
+        Warning = "#d9a31a",      // Gold/amber
+        
+        // Action colors
+        ActionDefault = "#1b4332", // Dark forest green
+        ActionDisabled = "#e5e5e5", // Light gray
+        ActionDisabledBackground = "#f5f5f5", // Lighter gray
+        
+        // Line/border colors
+        LinesDefault = "#e5e5e5",  // Light gray
+        TableLines = "#e5e5e5",    // Light gray
+        Divider = "#e5e5e5",       // Light gray
+        OverlayLight = "rgba(255,255,255,0.7)",
+    };
+
+    private readonly PaletteDark _darkPalette = new()
+    {
+        // Main colors - black with dark green accents
+        Primary = "#1b4332",          // Dark forest green as accent color
+        Secondary = "#2d6a4f",        // Medium forest green
+        Tertiary = "#40916c",         // Light forest green
+        
+        // Background colors - pure black
+        Surface = "#000000",          // Pure black
+        Background = "#000000",       // Pure black
+        BackgroundGray = "#121212",   // Very dark gray, nearly black
+        
+        // Appbar
+        AppbarText = "#ffffff",       // White text
+        AppbarBackground = "#0e261c", // Dark forest green background
+        
+        // Drawer
+        DrawerBackground = "#000000", // Black
+        DrawerText = "#ffffff",       // White text
+        DrawerIcon = "#2d6a4f",       // Medium forest green for accent
+        
+        // Text colors
+        TextPrimary = "#ffffff",      // White
+        TextSecondary = "#b7e4c7",    // Light mint green for accent
+        TextDisabled = "#4d4d4d",     // Dark gray
+        
+        // Gray variants
+        GrayLight = "#1a1a1a",        // Very dark gray
+        GrayLighter = "#2a2a2a",      // Dark gray
+        
+        // Status colors - with green accent
+        Info = "#2d6a4f",             // Medium forest green
+        Success = "#1b4332",          // Dark forest green
+        Warning = "#ffca3a",          // Amber for contrast
+        Error = "#ff595e",            // Soft red
+        
+        // Lines/border colors
+        LinesDefault = "#1a1a1a",     // Very dark gray
+        TableLines = "#1a1a1a",       // Very dark gray
+        Divider = "#1a1a1a",          // Very dark gray
+        OverlayLight = "rgba(0,0,0,0.7)", // Dark overlay
+    };
+
+    [Inject]
+    private IJSRuntime? JSRuntime { get; set; }
+}
