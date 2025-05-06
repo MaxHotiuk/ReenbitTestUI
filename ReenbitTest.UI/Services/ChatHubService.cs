@@ -25,7 +25,7 @@ namespace ReenbitTest.UI.Services
 
         public ChatHubService(IConfiguration configuration, ILogger<ChatHubService> logger)
         {
-            _hubUrl = configuration["ApiEndpoints:ChatHub"] ?? "https://localhost:7138/chathub";
+            _hubUrl = configuration["ApiEndpoints:ChatHub"]!;
             _logger = logger;
         }
 
@@ -99,16 +99,27 @@ namespace ReenbitTest.UI.Services
                 _logger.LogInformation($"Loaded {messages.Count} recent messages");
                 OnLoadRecentMessages.Invoke(messages);
             });
+            // _hubConnection.On<dynamic>("UserTyping", info => 
+            // {
+            //     var typingInfo = new UserTypingInfo
+            //     {
+            //         UserId = info.userId,
+            //         UserName = info.userName,
+            //         ChatRoomId = info.chatRoomId
+            //     };
+            //     OnUserTyping.Invoke(typingInfo);
+            // });
 
-            _hubConnection.On<dynamic>("UserTyping", info => 
+            _hubConnection.On<UserTypingInfo>("UserTyping", typingInfo => 
             {
-                var typingInfo = new UserTypingInfo
-                {
-                    UserId = info.userId,
-                    UserName = info.userName,
-                    ChatRoomId = info.chatRoomId
-                };
+                _logger.LogInformation($"User typing: {typingInfo.UserName}");
                 OnUserTyping.Invoke(typingInfo);
+            });
+
+            _hubConnection.On<UserTypingInfo>("UserStoppedTyping", typingInfo => 
+            {
+                _logger.LogInformation($"User stopped typing: {typingInfo.UserName}");
+                OnUserStoppedTyping.Invoke(typingInfo);
             });
 
             _hubConnection.On<dynamic>("UserStoppedTyping", info => 

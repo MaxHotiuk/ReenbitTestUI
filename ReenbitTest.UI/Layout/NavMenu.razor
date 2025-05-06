@@ -7,8 +7,17 @@
     <div class="d-flex flex-row align-center px-4 py-2">
         <MudText Typo="Typo.h5" Color="Color.Primary" Class="ml-2" Style="padding-top: 10px;">ReenbitTest</MudText>
     </div>
-
-    <ContentContainer ActiveSection="@ActiveSection" />
+    <AuthorizeView>
+        <Authorized>
+            <ContentContainer ActiveSection="@ActiveSection" />
+        </Authorized>
+        <NotAuthorized>
+            <MudDivider Class="my-2" />
+            <div class="d-flex flex-column justify-center align-center h-100">
+                <MudText Typo="Typo.h6" Color="Color.Primary">Log in to see your chats.</MudText>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
     
     <MudDivider Class="my-2" />
     

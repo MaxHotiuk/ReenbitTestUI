@@ -7,79 +7,75 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<div class="chats-sidebar">
-    <div class="d-flex justify-space-between align-center px-2 mb-2">
-        <MudText Typo="Typo.h6" Class="mud-text-truncate">Chats</MudText>
-        <MudIconButton Icon="@Icons.Material.Filled.Add" 
-                      Size="Size.Small"
-                      Color="Color.Primary" 
-                      OnClick="OpenNewChatDialog" />
-    </div>
+<MudPaper Class="d-flex flex-column h-100" Elevation="0" Square="true">
+    <MudToolBar Dense="true" DisableGutters="true" Class="px-2">
+        <MudText Typo="Typo.subtitle1" Class="mud-text-truncate">Chats</MudText>
+        <MudSpacer />
+        <MudTooltip Text="New Chat">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                          Size="Size.Small"
+                          Color="Color.Primary" 
+                          OnClick="OpenNewChatDialog" />
+        </MudTooltip>
+    </MudToolBar>
+
+    <MudDivider />
 
     @if (_isLoading)
     {
-        <div class="d-flex justify-center my-4">
+        <MudContainer Class="d-flex justify-center my-4">
             <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
-        </div>
+        </MudContainer>
     }
     else if (_chatRooms.Count == 0)
     {
-        <MudText Typo="Typo.caption" Class="px-2 text-center mud-text-secondary">
-            No chats yet. Start a new conversation.
-        </MudText>
+        <MudContainer Class="d-flex justify-center align-center my-4">
+            <MudText Typo="Typo.caption" Class="text-center mud-text-secondary">
+                No chats yet
+            </MudText>
+        </MudContainer>
     }
     else
     {
-        <div class="chat-list">
+        <MudList T="string" Clickable="true" DisablePadding="true" Class="overflow-y-auto flex-grow-1 pa-0">
             @foreach (var chat in _chatRooms)
             {
-                <a href="/@chat.Id" style="text-decoration: none;">
-                    <MudPaper Elevation="0" 
-                        Class="@GetChatItemClass(chat.Id)" 
-                        Style="cursor: pointer;">
-                        <div class="d-flex flex-column py-2 px-2">
-                            <div class="d-flex justify-space-between align-center">
-                                <MudText Typo="Typo.body2" Class="mud-text-truncate" Style="max-width: 80%;">
-                                    @chat.Name
-                                </MudText>
-                                @if (_unreadMessages.TryGetValue(chat.Id, out var unread) && unread > 0)
-                                {
-                                    <MudBadge Color="Color.Secondary" Content="@unread" Overlap="true" Max="99">
-                                        <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" />
-                                    </MudBadge>
-                                }
-                            </div>
-                            @if (_lastMessages.TryGetValue(chat.Id, out var message))
+                <MudListItem OnClick="@(() => SelectChat(chat))" 
+                            Class="@GetChatItemClass(chat.Id)" 
+                            Dense="true">
+                    <div class="d-flex flex-column w-100 py-1">
+                        <div class="d-flex justify-space-between align-center">
+                            <MudText Typo="Typo.body2" Class="mud-text-truncate" Style="max-width: 75%;">
+                                @chat.Name
+                            </MudText>
+                            @if (_unreadMessages.TryGetValue(chat.Id, out var unread) && unread > 0)
                             {
-                                <MudText Typo="Typo.caption" Class="mud-text-truncate text-muted">
-                                    @GetLastMessagePreview(message)
-                                </MudText>
-                            }
-                            else
-                            {
-                                <MudText Typo="Typo.caption" Class="mud-text-truncate text-muted">
-                                    No messages yet
-                                </MudText>
+                                <MudBadge Color="Color.Secondary" Content="@unread" Overlap="true" Max="99" Class="ml-1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" />
+                                </MudBadge>
                             }
                         </div>
-                    </MudPaper>
-                </a>
+                        <MudText Typo="Typo.caption" Class="mud-text-truncate" Style="opacity: 0.7;">
+                            @GetLastMessagePreview(chat.Id)
+                        </MudText>
+                    </div>
+                </MudListItem>
             }
-        </div>
+        </MudList>
     }
 
     @if (_typingUsers.Any())
     {
-        <div class="typing-indicators px-2 mt-2">
+        <MudPaper Elevation="0" Class="mt-auto pa-2" Style="min-height: 24px;">
             @foreach (var typingInfo in _typingUsers)
             {
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">
                     <em>@typingInfo.Value is typing...</em>
                 </MudText>
             }
-        </div>
+        </MudPaper>
     }
-</div>
+</MudPaper>
 
 @code {
     [Parameter]
@@ -139,7 +135,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error connecting to chat service: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Connection error: {ex.Message}", Severity.Error);
         }
     }
 
@@ -213,7 +209,7 @@
         catch (Exception ex)
         {
             _isLoading = false;
-            Snackbar.Add($"Error loading chats: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
     }
 
@@ -230,30 +226,39 @@
         NavigationManager.NavigateTo($"/{chat.Id}");
         
         await OnChatSelected.InvokeAsync(chat.Id);
-        StateHasChanged(); // Force UI update
+        StateHasChanged();
     }
 
     private string GetChatItemClass(int chatId)
     {
-        var baseClass = "chat-item mb-1";
-        return chatId == _selectedChatId ? $"{baseClass} selected-chat" : baseClass;
+        return chatId == _selectedChatId 
+            ? "border-left: 3px solid var(--mud-palette-primary); background-color: var(--mud-palette-primary-hover);" 
+            : "";
     }
 
-    private string GetLastMessagePreview(Message message)
+    private string GetLastMessagePreview(int chatId)
     {
-        var senderPrefix = message.IsCurrentUser ? "You: " : $"{message.SenderUserName}: ";
-        return $"{senderPrefix}{message.Content}";
+        if (_lastMessages.TryGetValue(chatId, out var message))
+        {
+            var senderPrefix = message.IsCurrentUser ? "You: " : $"{message.SenderUserName}: ";
+            return $"{senderPrefix}{message.Content}";
+        }
+        return "No messages";
     }
 
     private async Task OpenNewChatDialog()
     {
-        var options = new DialogOptions { CloseOnEscapeKey = true, CloseButton = true };
+        var options = new DialogOptions { 
+            CloseOnEscapeKey = true, 
+            CloseButton = true,
+            MaxWidth = MaxWidth.ExtraSmall
+        };
+        
         var parameters = new DialogParameters
         {
             { "OnChatCreated", EventCallback.Factory.Create<ChatRoom>(this, OnChatCreated) }
         };
         
-        // Use Show instead of ShowAsync to properly handle the dialog reference
         await DialogService.ShowAsync<NewChatDialog>("New Chat", parameters, options);
     }
 
@@ -287,38 +292,3 @@
         return ValueTask.CompletedTask;
     }
 }
-
-<style>
-    .chats-sidebar {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        overflow-y: hidden;
-    }
-
-    .chat-list {
-        overflow-y: auto;
-        flex-grow: 1;
-    }
-
-    .chat-item {
-        transition: background-color 0.2s ease;
-    }
-
-    .chat-item:hover {
-        background-color: rgba(var(--mud-palette-primary-rgb), 0.05);
-    }
-
-    .selected-chat {
-        background-color: rgba(var(--mud-palette-primary-rgb), 0.1);
-        border-left: 2px solid var(--mud-palette-primary);
-    }
-
-    .text-muted {
-        opacity: 0.7;
-    }
-
-    .typing-indicators {
-        min-height: 1.5rem;
-    }
-</style>
