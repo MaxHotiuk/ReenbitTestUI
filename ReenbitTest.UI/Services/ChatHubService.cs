@@ -99,16 +99,6 @@ namespace ReenbitTest.UI.Services
                 _logger.LogInformation($"Loaded {messages.Count} recent messages");
                 OnLoadRecentMessages.Invoke(messages);
             });
-            // _hubConnection.On<dynamic>("UserTyping", info => 
-            // {
-            //     var typingInfo = new UserTypingInfo
-            //     {
-            //         UserId = info.userId,
-            //         UserName = info.userName,
-            //         ChatRoomId = info.chatRoomId
-            //     };
-            //     OnUserTyping.Invoke(typingInfo);
-            // });
 
             _hubConnection.On<UserTypingInfo>("UserTyping", typingInfo => 
             {
