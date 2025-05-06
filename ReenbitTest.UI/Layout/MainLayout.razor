@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @inject Blazored.LocalStorage.ILocalStorageService localStorage
+@inject ReenbitTest.UI.Services.NavbarEventService NavbarEventService
 @using Microsoft.AspNetCore.Components.Authorization
 @using ReenbitTest.UI.Interfaces
 @inject IAuthService AuthService
@@ -22,14 +23,14 @@ else
     <MudDialogProvider />
     <MudSnackbarProvider />
     <MudLayout>
-        <!-- Mobile Top AppBar - Only visible on small screens -->
-        <MudAppBar Elevation="1" Dense="true" Fixed="true" Class="d-flex d-sm-none">
-            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle" />
+        <!-- Mobile Top AppBar - Only visible on screens smaller than md -->
+        <MudAppBar Elevation="1" Dense="true" Fixed="true" Class="d-flex d-md-none">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleNavbar" />
             <MudIcon Icon="@Icons.Material.Filled.Chat" Color="Color.Inherit" Size="Size.Medium" Class="ml-2" />
             <MudText Typo="Typo.h6" Class="ml-2">ReenbitTest</MudText>
         </MudAppBar>
         
-        <!-- Left Drawer - Always open on desktop, toggleable on mobile -->
+        <!-- Left Drawer - Always open on desktop, toggleable on smaller screens -->
         <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Never"
                    Elevation="2" Variant="@_drawerVariant" Style="width: 280px;">
             <NavMenu 
@@ -40,12 +41,9 @@ else
                 ActiveSectionChanged="@HandleSectionChanged" />
         </MudDrawer>
         
-        <MudMainContent Class="pt-4 px-4">
-            <!-- Add top padding only on mobile to account for the AppBar -->
-            <div class="@(_drawerVariant == DrawerVariant.Responsive ? "pt-7 d-block d-sm-none" : "")">
-                @Body
-            </div>
-            <div class="@(_drawerVariant == DrawerVariant.Responsive ? "d-none d-sm-block" : "")">
+        <MudMainContent>
+            <!-- Content with appropriate spacing for different viewports -->
+            <div class="content-container px-4 py-4">
                 @Body
             </div>
         </MudMainContent>
@@ -73,13 +71,33 @@ else
         z-index: 1000;
     }
     
-    @@media (min-width: 600px) {
+    /* Fixed responsive styles */
+    .content-container {
+        transition: margin-left 0.3s;
+    }
+    
+    /* Mobile and medium screens - Navbar either closed or toggled */
+    @@media (max-width: 959px) {
+        .mud-drawer-open.mud-drawer-left ~ .mud-main-content {
+            margin-left: 0 !important;
+        }
+        
+        /* Add top padding only on mobile to account for the AppBar */
+        @@media (max-width: 767px) {
+            .content-container {
+                padding-top: 56px !important; /* Height of dense AppBar */
+            }
+        }
+    }
+    
+    /* Desktop screens - Navbar always open */
+    @@media (min-width: 960px) {
         .mud-drawer {
             position: fixed !important;
             height: 100vh;
         }
         
-        .mud-main-content {
+        .mud-drawer-open.mud-drawer-left ~ .mud-main-content .content-container {
             margin-left: 280px;
         }
     }
@@ -96,6 +114,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         base.OnInitialized();
+
+        NavbarEventService.OnNavbarToggle += ToggleNavbar;
 
         _theme = new()
         {
@@ -145,16 +165,17 @@ else
                 _isDarkMode = storedTheme.Value;
             }
 
-            // On mobile, start with drawer closed
+            // Determine initial drawer state based on screen size
             var windowWidth = await JSRuntime!.InvokeAsync<int>("getWindowWidth");
-            if (windowWidth < 600)
-            {
-                _drawerOpen = false;
-            }
-            else
+            if (windowWidth >= 960)
             {
                 // On desktop, always start with drawer open
                 _drawerOpen = true;
+            }
+            else
+            {
+                // On mobile/tablet, start with drawer closed
+                _drawerOpen = false;
             }
         }
     }
@@ -173,9 +194,10 @@ else
         }
     }
 
-    private void DrawerToggle()
+    private void ToggleNavbar()
     {
         _drawerOpen = !_drawerOpen;
+        StateHasChanged();
     }
 
     private async Task DarkModeToggle()
@@ -198,6 +220,11 @@ else
     {
         _activeSection = section;
         StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavbarEventService.OnNavbarToggle -= ToggleNavbar;
     }
 
     private readonly PaletteLight _lightPalette = new()

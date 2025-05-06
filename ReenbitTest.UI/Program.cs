@@ -30,6 +30,8 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChatHubService, ChatHubService>();
 
+builder.Services.AddScoped<NavbarEventService>();
+
 // Configure application settings
 if (builder.Configuration["ApiEndpoints:BaseUrl"] == null)
 {

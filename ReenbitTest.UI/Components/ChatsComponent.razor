@@ -6,6 +6,8 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject ReenbitTest.UI.Services.NavbarEventService NavbarEventService
 
 <MudPaper Class="d-flex flex-column h-100" Elevation="0" Square="true">
     <MudToolBar Dense="true" DisableGutters="true" Class="px-2">
@@ -225,8 +227,30 @@
         // Navigate to the chat page with the chat ID
         NavigationManager.NavigateTo($"/{chat.Id}");
         
+        // Toggle the navbar closed on small screens
+        if (await IsSmallScreenAsync())
+        {
+            NavbarEventService.ToggleNavbar();
+        }
+        
         await OnChatSelected.InvokeAsync(chat.Id);
         StateHasChanged();
+    }
+
+    // Helper to check screen size
+    private async Task<bool> IsSmallScreenAsync()
+    {
+        try
+        {
+            // Check if current width is less than 600px (typical small screen breakpoint)
+            var windowWidth = await JSRuntime.InvokeAsync<int>("getWindowWidth");
+            return windowWidth < 960;
+        }
+        catch
+        {
+            // Fallback if JS interop fails
+            return false;
+        }
     }
 
     private string GetChatItemClass(int chatId)

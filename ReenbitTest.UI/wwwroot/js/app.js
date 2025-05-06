@@ -10,23 +10,19 @@ window.addEventListener('resize', function () {
     // DotNet.invokeMethodAsync('YourAssemblyName', 'UpdateDrawerState', window.innerWidth);
 });
 
-window.scrollToBottom = function (elementId) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.scrollTop = element.scrollHeight;
-    }
-};
-
 window.preventDefault = function (event) {
     event.preventDefault();
     return true;
 };
-
-window.blazorHelpers = {
-    scrollElementToBottom: function (elementId) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.scrollTop = element.scrollHeight;
-        }
+window.scrollFunctions = {
+    scrollToBottom: function () {
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+        });
+    },
+    
+    getWindowWidth: function () {
+        return window.innerWidth;
     }
 };
