@@ -54,7 +54,6 @@ namespace ReenbitTest.UI.Services
             var currentUserId = _authService.CurrentUser?.Id;
             if (response != null && currentUserId != null)
             {
-                // Mark messages from the current user
                 foreach (var message in response)
                 {
                     message.IsCurrentUser = message.SenderUserName == _authService.CurrentUser!.UserName;
@@ -62,6 +61,12 @@ namespace ReenbitTest.UI.Services
             }
             
             return response ?? [];
+        }
+
+        public async Task<bool> MarkMessagesAsReadAsync(int chatRoomId)
+        {
+            var response = await _httpClient.PostAsync($"api/chatrooms/{chatRoomId}/read", null);
+            return response.IsSuccessStatusCode;
         }
     }
 }

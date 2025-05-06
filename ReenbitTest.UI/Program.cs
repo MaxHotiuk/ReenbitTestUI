@@ -14,7 +14,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Set the base address for API calls
-string apiBaseUrl = builder.Configuration["ApiEndpoints:BaseUrl"] ?? "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/api";
+string apiBaseUrl = builder.Configuration["ApiEndpoints:BaseUrl"] ?? "http://localhost:5120/api";
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
 
 // Add Blazored LocalStorage
@@ -37,8 +37,10 @@ if (builder.Configuration["ApiEndpoints:BaseUrl"] == null)
 {
     builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
     {
-        ["ApiEndpoints:BaseUrl"] = "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/api",
-        ["ApiEndpoints:ChatHub"] = "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/chathub"
+        // ["ApiEndpoints:BaseUrl"] = "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/api",
+        // ["ApiEndpoints:ChatHub"] = "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/chathub",
+        ["ApiEndpoints:BaseUrl"] = "http://localhost:5120/api",
+        ["ApiEndpoints:ChatHub"] = "http://localhost:5120/chathub"
     });
 }
 

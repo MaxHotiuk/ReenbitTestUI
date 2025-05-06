@@ -10,5 +10,6 @@ namespace ReenbitTest.UI.Models
         public int ChatRoomId { get; set; }
         public string? SentimentLabel { get; set; }
         public bool IsCurrentUser { get; set; }
+        public bool IsRead { get; set; }
     }
 }

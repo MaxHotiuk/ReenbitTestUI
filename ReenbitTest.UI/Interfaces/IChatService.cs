@@ -10,5 +10,6 @@ namespace ReenbitTest.UI.Interfaces
         Task<bool> AddUserToChatRoomAsync(int chatRoomId, string userId);
         Task<bool> RemoveUserFromChatRoomAsync(int chatRoomId, string userId);
         Task<List<Message>> GetMessagesForChatRoomAsync(int chatRoomId, int page = 1, int pageSize = 20);
+        Task<bool> MarkMessagesAsReadAsync(int chatRoomId);
     }
 }

@@ -50,23 +50,50 @@
                             <MudText Typo="Typo.body2" Class="mud-text-truncate" Style="max-width: 75%;">
                                 @chat.Name
                             </MudText>
-                            @if (_unreadMessages.TryGetValue(chat.Id, out var unread) && unread > 0)
+                            @if (chat.UnreadCount > 0)
                             {
-                                <MudBadge Color="Color.Secondary" Content="@unread" Overlap="true" Max="99" Class="ml-1">
+                                <MudBadge Color="Color.Secondary" Content="@chat.UnreadCount" Overlap="true" Max="99" Class="ml-1">
                                     <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" />
                                 </MudBadge>
                             }
                         </div>
-                        <MudText Typo="Typo.caption" Class="mud-text-truncate" Style="opacity: 0.7;">
-                            @GetLastMessagePreview(chat.Id)
-                        </MudText>
+                        @{
+                            var typingUsersInChat = _typingUsers.Where(t => t.ChatRoomId == chat.Id)
+                                                                .Select(t => t.UserName)
+                                                                .Distinct()
+                                                                .ToList();
+                        }
+                        
+                        @if (typingUsersInChat.Count == 0)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-truncate" Style="opacity: 0.7;">
+                                @GetLastMessagePreview(chat)
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Color="Color.Secondary" Typo="Typo.caption" Class="mud-text-truncate" Style="opacity: 0.7;">
+                                @if (typingUsersInChat.Count == 1) 
+                                {
+                                    <em>@typingUsersInChat[0] is typing...</em>
+                                }
+                                else if (typingUsersInChat.Count == 2)
+                                {
+                                    <em>@typingUsersInChat[0] and @typingUsersInChat[1] are typing...</em>
+                                }
+                                else if (typingUsersInChat.Count > 2)
+                                {
+                                    <em>@typingUsersInChat.Count people are typing...</em>
+                                }
+                            </MudText>
+                        }
                     </div>
                 </MudListItem>
             }
         </MudList>
     }
 
-    @if (_typingUsers.Any())
+    @* @if (_typingUsers.Any())
     {
         <MudPaper Elevation="0" Class="mt-auto pa-2" Style="min-height: 24px;">
             @foreach (var typingInfo in _typingUsers)
@@ -76,7 +103,7 @@
                 </MudText>
             }
         </MudPaper>
-    }
+    } *@
 </MudPaper>
 
 @code {
@@ -85,9 +112,7 @@
 
     private bool _isLoading = true;
     private List<ChatRoom> _chatRooms = new();
-    private Dictionary<int, Message> _lastMessages = new();
-    private Dictionary<int, int> _unreadMessages = new();
-    private Dictionary<string, string> _typingUsers = new();
+    private List<UserTypingInfo> _typingUsers = new();
     private int? _selectedChatId;
     private Timer? _typingTimer;
     private bool _connectionInitialized = false;
@@ -101,6 +126,25 @@
         if (int.TryParse(uri.AbsolutePath.Trim('/'), out var chatId))
         {
             await SelectChat(_chatRooms.FirstOrDefault(c => c.Id == chatId));
+        }
+        
+        // Start background chat joining
+        _ = JoinChatRoomsInBackgroundAsync();
+    }
+
+    private async Task JoinChatRoomsInBackgroundAsync()
+    {
+        try
+        {
+            foreach (var chatRoom in _chatRooms)
+            {
+                await ChatHubService.JoinChatRoomAsync(chatRoom.Id);
+                Console.WriteLine($"Joined chat room: {chatRoom.Name}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() => Snackbar.Add($"Failed to join chat rooms: {ex.Message}", Severity.Warning));
         }
     }
 
@@ -143,16 +187,18 @@
 
     private void HandleReceiveMessage(Message message)
     {
-        _lastMessages[message.ChatRoomId] = message;
-        
-        // If message is not from current user and not in the currently selected chat
-        if (!message.IsCurrentUser && _selectedChatId != message.ChatRoomId)
+        // Find the chat room and update its unread count and last message
+        var chatRoom = _chatRooms.FirstOrDefault(c => c.Id == message.ChatRoomId);
+        if (chatRoom != null)
         {
-            if (!_unreadMessages.TryGetValue(message.ChatRoomId, out var count))
+            // Update last message
+            chatRoom.LastMessage = message.Content;
+            
+            // Increment unread count if not in current chat and not from current user
+            if (!message.IsCurrentUser && _selectedChatId != message.ChatRoomId)
             {
-                count = 0;
+                chatRoom.UnreadCount++;
             }
-            _unreadMessages[message.ChatRoomId] = count + 1;
         }
         
         InvokeAsync(StateHasChanged);
@@ -162,14 +208,19 @@
     {
         if (typingInfo.UserId != AuthService.CurrentUser?.Id)
         {
-            _typingUsers[typingInfo.UserId] = typingInfo.UserName;
+            _typingUsers.Add(new UserTypingInfo
+            {
+                UserId = typingInfo.UserId,
+                UserName = typingInfo.UserName,
+                ChatRoomId = typingInfo.ChatRoomId
+            });
             InvokeAsync(StateHasChanged);
             
             // Clear typing indicator after 3 seconds of inactivity
             _typingTimer?.Dispose();
             _typingTimer = new Timer(_ => 
             {
-                _typingUsers.Remove(typingInfo.UserId);
+                _typingUsers.RemoveAll(u => u.UserId == typingInfo.UserId && u.ChatRoomId == typingInfo.ChatRoomId);
                 InvokeAsync(StateHasChanged);
             }, null, 3000, Timeout.Infinite);
         }
@@ -177,11 +228,8 @@
 
     private void HandleUserStoppedTyping(UserTypingInfo typingInfo)
     {
-        if (_typingUsers.ContainsKey(typingInfo.UserId))
-        {
-            _typingUsers.Remove(typingInfo.UserId);
-            InvokeAsync(StateHasChanged);
-        }
+        _typingUsers.RemoveAll(u => u.UserId == typingInfo.UserId && u.ChatRoomId == typingInfo.ChatRoomId);
+        InvokeAsync(StateHasChanged);
     }
 
     private void HandleError(string error)
@@ -195,17 +243,6 @@
         {
             _isLoading = true;
             _chatRooms = await ChatService.GetChatRoomsAsync();
-            
-            // Load last message for each chat
-            foreach (var chat in _chatRooms)
-            {
-                var messages = await ChatService.GetMessagesForChatRoomAsync(chat.Id, 1, 1);
-                if (messages.Count > 0)
-                {
-                    _lastMessages[chat.Id] = messages[0];
-                }
-            }
-            
             _isLoading = false;
         }
         catch (Exception ex)
@@ -221,8 +258,13 @@
         
         _selectedChatId = chat.Id;
         
-        // Clear unread count for this chat
-        _unreadMessages[chat.Id] = 0;
+        // Reset unread count for this chat
+        if (chat.UnreadCount > 0)
+        {
+            chat.UnreadCount = 0;
+            // Mark messages as read on the server
+            await ChatService.MarkMessagesAsReadAsync(chat.Id);
+        }
         
         // Navigate to the chat page with the chat ID
         NavigationManager.NavigateTo($"/{chat.Id}");
@@ -260,12 +302,11 @@
             : "";
     }
 
-    private string GetLastMessagePreview(int chatId)
+    private string GetLastMessagePreview(ChatRoom chat)
     {
-        if (_lastMessages.TryGetValue(chatId, out var message))
+        if (!string.IsNullOrEmpty(chat.LastMessage))
         {
-            var senderPrefix = message.IsCurrentUser ? "You: " : $"{message.SenderUserName}: ";
-            return $"{senderPrefix}{message.Content}";
+            return chat.LastMessage;
         }
         return "No messages";
     }

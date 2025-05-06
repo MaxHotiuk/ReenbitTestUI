@@ -34,19 +34,31 @@
                             Class="mr-3 d-md-none" />
                         
                         <div class="d-flex flex-column flex-grow-1">
-                            <MudText Typo="Typo.h6">@_selectedChatRoom.Name</MudText>
-                
-                            @if (_typingUsers.Any())
+                            @if (_isLoadingMessages)
                             {
+                                <MudText Typo="Typo.h6">
+                                    <MudSkeleton Width="140px" Animation="Animation.Wave" />
+                                </MudText>
                                 <MudText Typo="Typo.caption">
-                                    @GetTypingText()
+                                    <MudSkeleton Width="80px" Animation="Animation.Wave" />
                                 </MudText>
                             }
                             else
                             {
-                                <MudText Typo="Typo.caption">
-                                    @(_selectedChatRoom.Users.Count) members
-                                </MudText>
+                                <MudText Typo="Typo.h6">@_selectedChatRoom.Name</MudText>
+                
+                                @if (_typingUsers.Any())
+                                {
+                                    <MudText Typo="Typo.caption">
+                                        @GetTypingText()
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption">
+                                        @(_selectedChatRoom.Users.Count) members
+                                    </MudText>
+                                }
                             }
                         </div>
                     </MudAppBar>
@@ -58,7 +70,10 @@
                     <MudPaper id="messages-container" Elevation="0" Class="flex-grow-1 overflow-y-auto pa-3" @ref="_messagesContainerRef" Style="margin-bottom: 76px;">
                         @if (_isLoadingMessages)
                         {
-                            <MudProgressCircular Color="Color.Secondary" Size="Size.Medium" Indeterminate="true" Class="ma-auto d-flex" />
+                            <div class="d-flex flex-column align-center justify-center" style="height: 100%;">
+                                <MudProgressLinear Color="Color.Secondary" Striped="true" Size="Size.Medium" Indeterminate="true" Class="my-7" Style="max-width: 300px;" />
+                                <MudText Align="Align.Center" Class="mud-text-secondary mt-2">Loading messages...</MudText>
+                            </div>
                         }
                         else if (_messages.Count == 0)
                         {
@@ -236,6 +251,8 @@
             _messages.Clear();
             _currentPage = 1;
             _allMessagesLoaded = false;
+            _isLoadingMessages = true;
+            StateHasChanged();
             _selectedChatRoom = await ChatService.GetChatRoomAsync(chatRoomId);
             await LoadMessages();
 
@@ -246,6 +263,7 @@
         }
         catch (Exception ex)
         {
+            _isLoadingMessages = false;
             Snackbar.Add($"Error loading chat: {ex.Message}", Severity.Error);
         }
     }
