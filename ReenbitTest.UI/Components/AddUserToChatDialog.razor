@@ -1,0 +1,246 @@
+@using ReenbitTest.UI.Interfaces
+@using ReenbitTest.UI.Models
+@inject IUserService UserService
+@inject IChatService ChatService
+@inject IAuthService AuthService
+@inject ISnackbar Snackbar
+
+<MudDialog DisableSidePadding="true" Class="chat-info-dialog">
+    <DialogContent>
+        <MudGrid>
+            <!-- Chat Participants -->
+            <MudItem xs="12">
+                <MudPaper Elevation="0" Class="pa-4">
+                    <div class="d-flex justify-space-between align-center mb-3">
+                        <MudText Typo="Typo.h6">Participants (@_chatUsers.Count)</MudText>
+                        <MudButton Variant="Variant.Text" 
+                                  StartIcon="@Icons.Material.Filled.Add" 
+                                  Color="Color.Primary"
+                                  OnClick="@ToggleAddUsers">
+                            @(_showAddUsers ? "Cancel" : "Add Users")
+                        </MudButton>
+                    </div>
+
+                    <!-- Participants List -->
+                    <MudPaper Elevation="0" Class="pa-0 mb-4" Style="max-height: 250px; overflow-y: auto;">
+                        @foreach (var user in _chatUsers)
+                        {
+                            <MudPaper Elevation="0" Class="pa-2 mb-2 d-flex justify-space-between align-center">
+                                <div class="d-flex align-center">
+                                    <MudAvatar Color="Color.Primary" Class="mr-3">@user.FullName[0]</MudAvatar>
+                                    <div>
+                                        <MudText Typo="Typo.body1">@user.FullName</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@@@user.UserName</MudText>
+                                    </div>
+                                </div>
+                            </MudPaper>
+                        }
+                    </MudPaper>
+
+                    <!-- Add Users Section -->
+                    @if (_showAddUsers)
+                    {
+                        <MudPaper Elevation="1" Class="pa-4 mb-4">
+                            <MudText Typo="Typo.h6" Class="mb-3">Add Users</MudText>
+                            
+                            <MudTextField @bind-Value="_searchQuery"
+                                         Label="Search users"
+                                         Adornment="Adornment.End"
+                                         AdornmentIcon="@Icons.Material.Filled.Search"
+                                         Immediate="true"
+                                         OnDebounceIntervalElapsed="SearchUsers"
+                                         DebounceInterval="300"
+                                         Class="mb-4" />
+
+                            @if (_isSearching)
+                            {
+                                <div class="d-flex justify-center my-4">
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                </div>
+                            }
+                            else if (_searchResults.Any())
+                            {
+                                <MudPaper Elevation="0" Class="pa-0" Style="max-height: 200px; overflow-y: auto;">
+                                    @foreach (var user in _searchResults)
+                                    {
+                                        <MudPaper Elevation="0" Class="pa-2 mb-2 d-flex justify-space-between align-center">
+                                            <div class="d-flex align-center">
+                                                <MudAvatar Color="Color.Secondary" Class="mr-3">@user.FullName[0]</MudAvatar>
+                                                <div>
+                                                    <MudText Typo="Typo.body1">@user.FullName</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@@@user.UserName</MudText>
+                                                </div>
+                                            </div>
+                                            <MudButton Color="Color.Primary"
+                                                      Size="Size.Small"
+                                                      Variant="Variant.Filled"
+                                                      Disabled="@_isAdding"
+                                                      OnClick="() => AddUserToChat(user)">
+                                                @if (_isAdding && _currentlyAddingUserId == user.Id)
+                                                {
+                                                    <MudProgressCircular Class="mr-1" Size="Size.Small" Indeterminate="true" />
+                                                    <span>Adding...</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Add</span>
+                                                }
+                                            </MudButton>
+                                        </MudPaper>
+                                    }
+                                </MudPaper>
+                            }
+                            else if (!string.IsNullOrEmpty(_searchQuery))
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">No users found</MudText>
+                            }
+                        </MudPaper>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+</MudDialog>
+
+<style>
+    .chat-info-dialog {
+        min-width: 500px;
+        max-width: 90vw;
+    }
+</style>
+
+@code {
+    [CascadingParameter] IDialogReference MudDialog { get; set; } = null!;
+    [Parameter] public int ChatRoomId { get; set; }
+    [Parameter] public EventCallback<User> OnUserAdded { get; set; }
+    [Parameter] public EventCallback<User> OnUserRemoved { get; set; }
+
+    private string _searchQuery = string.Empty;
+    private bool _isSearching = false;
+    private bool _isAdding = false;
+    private bool _showAddUsers = false;
+    private string? _currentlyAddingUserId;
+    private List<User> _allUsers = new();
+    private List<User> _chatUsers = new();
+    private List<User> _searchResults = new();
+    private ChatRoom? _chatRoom;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            _isSearching = true;
+            
+            // Load chat room details
+            _chatRoom = await ChatService.GetChatRoomAsync(ChatRoomId);
+            
+            // Get chat users from the room
+            _chatUsers = _chatRoom.Users;
+            
+            // Load all users for search
+            _allUsers = await UserService.GetUsersAsync();
+            
+            _isSearching = false;
+        }
+        catch (Exception ex)
+        {
+            _isSearching = false;
+            Snackbar.Add($"Error loading chat data: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ToggleAddUsers()
+    {
+        _showAddUsers = !_showAddUsers;
+        if (!_showAddUsers)
+        {
+            _searchQuery = string.Empty;
+            _searchResults.Clear();
+        }
+    }
+
+    private void SearchUsers()
+    {
+        try
+        {
+            _isSearching = true;
+            
+            if (string.IsNullOrWhiteSpace(_searchQuery))
+            {
+                _searchResults = new List<User>();
+            }
+            else
+            {
+                // Filter users based on search query and exclude current chat members
+                _searchResults = _allUsers
+                    .Where(u => (u.FullName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) || 
+                               u.UserName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+                               !_chatUsers.Any(cu => cu.Id == u.Id))
+                    .ToList();
+            }
+        }
+        finally
+        {
+            _isSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AddUserToChat(User user)
+    {
+        try
+        {
+            _isAdding = true;
+            _currentlyAddingUserId = user.Id;
+            
+            var result = await ChatService.AddUserToChatRoomAsync(ChatRoomId, user.Id);
+            
+            if (result)
+            {
+                // Update the chat users list
+                _chatUsers.Add(user);
+                
+                // Remove user from search results
+                _searchResults.Remove(user);
+                
+                await OnUserAdded.InvokeAsync(user);
+                Snackbar.Add($"{user.FullName} added to chat", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding user: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isAdding = false;
+            _currentlyAddingUserId = null;
+        }
+    }
+
+    private async Task RemoveUserFromChat(User user)
+    {
+        try
+        {
+            var result = await ChatService.RemoveUserFromChatRoomAsync(ChatRoomId, user.Id);
+            
+            if (result)
+            {
+                // Update the chat users list
+                _chatUsers.Remove(user);
+                
+                await OnUserRemoved.InvokeAsync(user);
+                Snackbar.Add($"{user.FullName} removed from chat", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error removing user: {ex.Message}", Severity.Error);
+        }
+    }
+}

@@ -9,7 +9,7 @@
 @inject IJSRuntime JSRuntime
 @inject ReenbitTest.UI.Services.NavbarEventService NavbarEventService
 
-<MudPaper Class="d-flex flex-column h-100" Elevation="0" Square="true">
+<MudPaper Class="d-flex flex-column h-100" Elevation="0" Square="true" Style="background-color: var(--mud-palette-background);">
     <MudToolBar Dense="true" DisableGutters="true" Class="px-2">
         <MudText Typo="Typo.subtitle1" Class="mud-text-truncate">Chats</MudText>
         <MudSpacer />
@@ -43,68 +43,60 @@
             @foreach (var chat in _chatRooms)
             {
                 <MudListItem OnClick="@(() => SelectChat(chat))" 
-                            Class="@GetChatItemClass(chat.Id)" 
+                            Class="@($"chat-list-item {GetChatItemClass(chat.Id)}")" 
                             Dense="true">
                     <div class="d-flex flex-column w-100 py-1">
                         <div class="d-flex justify-space-between align-center">
-                            <MudText Typo="Typo.body2" Class="mud-text-truncate" Style="max-width: 75%;">
+                            <MudText Typo="Typo.body2" Class="mud-text-truncate chat-name">
                                 @chat.Name
                             </MudText>
                             @if (chat.UnreadCount > 0)
                             {
-                                <MudBadge Color="Color.Secondary" Content="@chat.UnreadCount" Overlap="true" Max="99" Class="ml-1">
-                                    <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" />
+                                <MudBadge Color="Color.Secondary" 
+                                        Content="@chat.UnreadCount" 
+                                        Overlap="true" 
+                                        Max="99" 
+                                        Class="unread-badge">
                                 </MudBadge>
                             }
                         </div>
                         @{
                             var typingUsersInChat = _typingUsers.Where(t => t.ChatRoomId == chat.Id)
-                                                                .Select(t => t.UserName)
-                                                                .Distinct()
-                                                                .ToList();
+                                                            .Select(t => t.UserName)
+                                                            .Distinct()
+                                                            .ToList();
                         }
                         
-                        @if (typingUsersInChat.Count == 0)
-                        {
-                            <MudText Typo="Typo.caption" Class="mud-text-truncate" Style="opacity: 0.7;">
+                        <MudText Typo="Typo.caption" Class="mud-text-truncate" Style="opacity: 0.7;">
+                            @if (typingUsersInChat.Count > 0)
+                            {
+                                @GetTypingText(typingUsersInChat)
+                            }
+                            else
+                            {
                                 @GetLastMessagePreview(chat)
-                            </MudText>
-                        }
-                        else
-                        {
-                            <MudText Color="Color.Secondary" Typo="Typo.caption" Class="mud-text-truncate" Style="opacity: 0.7;">
-                                @if (typingUsersInChat.Count == 1) 
-                                {
-                                    <em>@typingUsersInChat[0] is typing...</em>
-                                }
-                                else if (typingUsersInChat.Count == 2)
-                                {
-                                    <em>@typingUsersInChat[0] and @typingUsersInChat[1] are typing...</em>
-                                }
-                                else if (typingUsersInChat.Count > 2)
-                                {
-                                    <em>@typingUsersInChat.Count people are typing...</em>
-                                }
-                            </MudText>
-                        }
+                            }
+                        </MudText>
                     </div>
                 </MudListItem>
             }
         </MudList>
     }
-
-    @* @if (_typingUsers.Any())
-    {
-        <MudPaper Elevation="0" Class="mt-auto pa-2" Style="min-height: 24px;">
-            @foreach (var typingInfo in _typingUsers)
-            {
-                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">
-                    <em>@typingInfo.Value is typing...</em>
-                </MudText>
-            }
-        </MudPaper>
-    } *@
 </MudPaper>
+
+<style>
+    .chat-list-item {
+        min-width: 0; /* Prevent overflow */
+    }
+    
+    .chat-name {
+        max-width: calc(100% - 40px); /* Account for badge space */
+    }
+    
+    .unread-badge {
+        margin-left: 4px;
+    }
+</style>
 
 @code {
     [Parameter]
@@ -183,6 +175,17 @@
         {
             Snackbar.Add($"Connection error: {ex.Message}", Severity.Error);
         }
+    }
+
+    private string GetTypingText(List<string> typingUsers)
+    {
+        return typingUsers.Count switch
+        {
+            1 => $"{typingUsers[0]} is typing...",
+            2 => $"{typingUsers[0]} and {typingUsers[1]} are typing...",
+            > 2 => $"{typingUsers.Count} people are typing...",
+            _ => ""
+        };
     }
 
     private void HandleReceiveMessage(Message message)
@@ -304,11 +307,13 @@
 
     private string GetLastMessagePreview(ChatRoom chat)
     {
-        if (!string.IsNullOrEmpty(chat.LastMessage))
-        {
-            return chat.LastMessage;
-        }
-        return "No messages";
+        if (string.IsNullOrEmpty(chat.LastMessage))
+            return "No messages";
+            
+        // Truncate message if too long
+        return chat.LastMessage.Length > 30 
+            ? chat.LastMessage.Substring(0, 27) + "..." 
+            : chat.LastMessage;
     }
 
     private async Task OpenNewChatDialog()

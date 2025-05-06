@@ -13,32 +13,75 @@
                          Required="true" 
                          RequiredError="Chat name is required"
                          Class="mb-3" />
-                         
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Add Participants</MudText>
             
-            @if (_isLoadingUsers)
-            {
-                <div class="d-flex justify-center my-2">
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            <div class="d-flex flex-column gap-2">
+                <MudText Typo="Typo.subtitle2">Add Participants</MudText>
+                
+                <div class="d-flex gap-2">
+                    <MudTextField @bind-Value="_searchQuery"
+                                 Label="Search users"
+                                 Adornment="Adornment.End"
+                                 AdornmentIcon="@Icons.Material.Filled.Search"
+                                 Immediate="true"
+                                 OnDebounceIntervalElapsed="SearchUsers"
+                                 DebounceInterval="300"
+                                 Class="flex-grow-1" />
                 </div>
-            }
-            else
-            {
-                <MudPaper Elevation="0" Class="pa-2 mb-3" Style="max-height: 200px; overflow-y: auto;">
-                    @foreach (var user in _availableUsers)
-                    {
-                        <MudCheckBox T="bool" @bind-Checked="@_selectedUsers[user.Id]" 
-                                    Label="@user.FullName" 
-                                    Color="Color.Primary"
-                                    Dense="true" />
-                    }
-                </MudPaper>
-            }
+
+                @if (_isSearching)
+                {
+                    <div class="d-flex justify-center my-2">
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    </div>
+                }
+                else if (_searchResults.Any())
+                {
+                    <MudPaper Elevation="0" Class="pa-2" Style="max-height: 200px; overflow-y: auto;">
+                        @foreach (var user in _searchResults)
+                        {
+                            <MudPaper Elevation="1" Class="pa-2 mb-2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText>@user.FullName</MudText>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                                                  Size="Size.Small"
+                                                  Color="Color.Primary"
+                                                  OnClick="() => AddUserToParticipants(user)" />
+                                </div>
+                            </MudPaper>
+                        }
+                    </MudPaper>
+                }
+                else if (!string.IsNullOrEmpty(_searchQuery))
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No users found</MudText>
+                }
+                
+                @if (_selectedParticipants.Any())
+                {
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2" Class="mt-2">Selected Participants (@_selectedParticipants.Count)</MudText>
+                    
+                    <MudPaper Elevation="0" Class="pa-2" Style="max-height: 200px; overflow-y: auto;">
+                        @foreach (var participant in _selectedParticipants)
+                        {
+                            <MudPaper Elevation="1" Class="pa-2 mb-2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText>@participant.FullName</MudText>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                                                  Size="Size.Small"
+                                                  Color="Color.Error"
+                                                  OnClick="() => RemoveUserFromParticipants(participant)" />
+                                </div>
+                            </MudPaper>
+                        }
+                    </MudPaper>
+                }
+            </div>
         </MudForm>
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Primary" 
-                  Disabled="@(!_isFormValid || _isCreating)" 
+                  Disabled="@(!_isFormValid || _isCreating || !_selectedParticipants.Any())" 
                   OnClick="CreateChat">
             @if (_isCreating)
             {
@@ -60,41 +103,83 @@
     private MudForm _form = null!;
     private bool _isFormValid;
     private string _chatName = string.Empty;
-    private bool _isLoadingUsers = true;
+    private string _searchQuery = string.Empty;
+    private bool _isSearching = false;
     private bool _isCreating = false;
-    private List<User> _availableUsers = new();
-    private Dictionary<string, bool> _selectedUsers = new();
+    private List<User> _allUsers = new();
+    private List<User> _searchResults = new();
+    private List<User> _selectedParticipants = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadUsers();
+        await LoadAllUsers();
     }
 
-    private async Task LoadUsers()
+    private async Task LoadAllUsers()
     {
         try
         {
-            _isLoadingUsers = true;
-            _availableUsers = await UserService.GetUsersAsync();
+            _isSearching = true;
+            _allUsers = await UserService.GetUsersAsync();
             
             // Filter out current user
-            _availableUsers = _availableUsers
+            _allUsers = _allUsers
                 .Where(u => u.Id != AuthService.CurrentUser?.Id)
                 .ToList();
             
-            // Initialize selected users dictionary
-            foreach (var user in _availableUsers)
-            {
-                _selectedUsers[user.Id] = false;
-            }
-            
-            _isLoadingUsers = false;
+            _isSearching = false;
         }
         catch (Exception ex)
         {
-            _isLoadingUsers = false;
+            _isSearching = false;
             Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task SearchUsers()
+    {
+        try
+        {
+            _isSearching = true;
+            await Task.Delay(1); // Force UI update
+            
+            if (string.IsNullOrWhiteSpace(_searchQuery))
+            {
+                _searchResults = new List<User>();
+            }
+            else
+            {
+                // Filter users based on search query and exclude already selected participants
+                _searchResults = _allUsers
+                    .Where(u => (u.FullName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) || 
+                               u.UserName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+                               !_selectedParticipants.Any(p => p.Id == u.Id))
+                    .ToList();
+            }
+        }
+        finally
+        {
+            _isSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private void AddUserToParticipants(User user)
+    {
+        if (!_selectedParticipants.Any(p => p.Id == user.Id))
+        {
+            _selectedParticipants.Add(user);
+            _searchResults.Remove(user);
+            
+            // Clear search after adding
+            _searchQuery = string.Empty;
+            _searchResults.Clear();
+        }
+    }
+
+    private void RemoveUserFromParticipants(User user)
+    {
+        _selectedParticipants.RemoveAll(p => p.Id == user.Id);
     }
 
     private async Task CreateChat()
@@ -102,15 +187,12 @@
         try
         {
             await _form.Validate();
-            if (!_isFormValid) return;
+            if (!_isFormValid || !_selectedParticipants.Any()) return;
             
             _isCreating = true;
             
             // Get selected user IDs
-            var selectedUserIds = _selectedUsers
-                .Where(kvp => kvp.Value)
-                .Select(kvp => kvp.Key)
-                .ToList();
+            var selectedUserIds = _selectedParticipants.Select(u => u.Id).ToList();
             
             // Add current user to participants
             if (AuthService.CurrentUser != null)
