@@ -69,6 +69,8 @@ else
         align-items: center;
         background-color: var(--mud-palette-background);
         z-index: 1000;
+        opacity: 1;
+        transition: opacity 0.5s ease-in-out;
     }
     
     /* Fixed responsive styles */
@@ -184,7 +186,7 @@ else
     {
         if (firstRender)
         {
-            await Task.Delay(500);
+            await Task.Delay(300); // Reduced delay for smoother transition
             _isLoaded = true;
             
             // Initialize authentication state from local storage

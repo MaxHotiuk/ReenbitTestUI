@@ -1,0 +1,72 @@
+/* Custom loading screen styles */
+#app {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100%;
+    background-color: #121212; /* Dark theme background from your palette */
+}
+
+.loading-splash {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.loading-icon {
+    font-size: 48px;
+    color: #273F4F; /* Your primary color */
+    margin-bottom: 16px;
+}
+
+.loading-text {
+    font-family: 'Ubuntu', sans-serif;
+    font-size: 24px;
+    color: #FFFFFF; /* White text for dark mode */
+    margin-bottom: 24px;
+}
+
+.loading-progress-bar {
+    width: 30%;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 30%;
+    background-color: #273F4F; /* Your primary color */
+    border-radius: 12px;
+    animation: progress-animation 1.5s infinite ease-in-out;
+}
+
+@keyframes progress-animation {
+    0% {
+        left: -30%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Hide the default Blazor loading elements */
+.loading-progress {
+    display: none;
+}
+
+.loading-progress-text {
+    display: none;
+}
