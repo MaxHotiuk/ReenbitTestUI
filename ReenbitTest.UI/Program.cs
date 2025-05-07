@@ -30,7 +30,9 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // API Communication Configuration
 // -------------------------------------------------------------------------
 // Set the base address for API calls
-string apiBaseUrl = builder.Configuration["ApiEndpoints:BaseUrl"] ?? "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/api";
+string apiBaseUrl = builder.HostEnvironment.IsDevelopment() 
+    ? (builder.Configuration["ApiEndpoints:BaseUrl"] ?? "http://localhost:5120/api")
+    : (builder.Configuration["ApiEndpoints:BaseUrl"] ?? "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/api");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
 
 // -------------------------------------------------------------------------
@@ -69,18 +71,27 @@ builder.Services.AddScoped<NavbarEventService>();
 // -------------------------------------------------------------------------
 // Configure application settings with fallback values when not provided
 // This enables the application to function in both development and production
+// Check if we're in development environment
+var isDevelopment = builder.HostEnvironment.IsDevelopment();
+
 if (builder.Configuration["ApiEndpoints:BaseUrl"] == null)
 {
-    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+    var endpoints = new Dictionary<string, string?>();
+    
+    if (isDevelopment)
+    {
+        // Development endpoints
+        endpoints["ApiEndpoints:BaseUrl"] = "http://localhost:5120/api";
+        endpoints["ApiEndpoints:ChatHub"] = "http://localhost:5120/chathub";
+    }
+    else
     {
         // Production endpoints
-        ["ApiEndpoints:BaseUrl"] = "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/api",
-        ["ApiEndpoints:ChatHub"] = "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/chathub"
-        
-        // Development endpoints (commented out)
-        // ["ApiEndpoints:BaseUrl"] = "http://localhost:5120/api",
-        // ["ApiEndpoints:ChatHub"] = "http://localhost:5120/chathub"
-    });
+        endpoints["ApiEndpoints:BaseUrl"] = "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/api";
+        endpoints["ApiEndpoints:ChatHub"] = "https://reenbittestapi-ajfja4efd9bfe4eg.canadacentral-01.azurewebsites.net/chathub";
+    }
+    
+    builder.Configuration.AddInMemoryCollection(endpoints);
 }
 
 // -------------------------------------------------------------------------
