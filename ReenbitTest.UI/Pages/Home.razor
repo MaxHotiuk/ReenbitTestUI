@@ -31,35 +31,33 @@
                     else
                     {
                         <MudPaper Elevation="0" Class="d-flex flex-column h-100" Style="background-color: var(--mud-palette-background);">
-                            <!-- Replace the current Chat Header with this version -->
-                            <!-- Chat Header - Fixed to the top -->
-                            <MudAppBar Color="Color.Primary" Fixed="true" Dense="false" Elevation="1" Class="flex-row align-center px-4" 
-                                    Style="border-bottom: 1px solid var(--mud-palette-lines-default); cursor: pointer;"
+                            <MudAppBar Color="Color.Surface" Fixed="true" Dense="false" Elevation="2" Class="flex-row align-center px-4 chat-header" 
+                                    Style="border-bottom: 1px solid var(--mud-palette-divider); cursor: pointer;"
                                     @onclick="OpenAddUserDialog">
                                 <!-- Mobile menu drawer button -->
-                                <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" 
+                                <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Primary" Edge="Edge.Start" 
                                             OnClick="@((e) => { ToggleNavbar(); })" 
                                             Class="mr-3 d-md-none" />
                                 
                                 <div class="d-flex flex-column flex-grow-1" style="text-align: left;">
                                     @if (_isLoadingMessages)
                                     {
-                                        <MudText Typo="Typo.h6" Style="color: white;">
+                                        <MudText Typo="Typo.h6" Color="Color.Primary">
                                             <MudSkeleton Width="140px" Animation="Animation.Wave" />
                                         </MudText>
-                                        <MudText Typo="Typo.caption" Style="color: white;">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
                                             <MudSkeleton Width="80px" Animation="Animation.Wave" />
                                         </MudText>
                                     }
                                     else
                                     {
-                                        <MudText>
+                                        <MudText Typo="Typo.h6" Color="Color.Primary">
                                             @_selectedChatRoom.Name
                                         </MudText>
 
                                         @if (_typingUsers.Any())
                                         {
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="typing-indicator">
                                                 @GetTypingText()
                                             </MudText>
                                         }
@@ -74,20 +72,24 @@
                             </MudAppBar>
                             
                             <!-- Spacer to account for fixed AppBar -->
-                            <div style="height: 64px;"></div>
+                            <div style="height: 96px;"></div>
 
                             <!-- Chat Messages -->
                             <MudPaper id="messages-container" Elevation="0" Class="flex-grow-1 overflow-y-auto pa-4" @ref="_messagesContainerRef" Style="margin-bottom: 76px; background-color: var(--mud-palette-background);">
                                 @if (_isLoadingMessages)
                                 {
                                     <div class="d-flex flex-column align-center justify-center" style="height: 100%;">
-                                        <MudProgressLinear Color="Color.Secondary" Striped="true" Size="Size.Medium" Indeterminate="true" Class="my-7" Style="max-width: 300px;" />
-                                        <MudText Align="Align.Center" Color="Color.Secondary" Class="mt-2">Loading messages...</MudText>
+                                        <MudProgressCircular Color="Color.Secondary" Size="Size.Medium" Indeterminate="true" />
+                                        <MudText Align="Align.Center" Color="Color.Secondary" Class="mt-4">Loading messages...</MudText>
                                     </div>
                                 }
                                 else if (_messages.Count == 0)
                                 {
-                                    <MudText Align="Align.Center" Color="Color.Secondary" Class="my-4">No messages yet</MudText>
+                                    <div class="d-flex flex-column align-center justify-center empty-state" style="height: 80%;">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Chat" Color="Color.Secondary" Size="Size.Large" Class="mb-4" />
+                                        <MudText Align="Align.Center" Typo="Typo.h6" Color="Color.Primary" Class="mb-2">No messages yet</MudText>
+                                        <MudText Align="Align.Center" Color="Color.Secondary">Start the conversation by sending a message below</MudText>
+                                    </div>
                                 }
                                 else
                                 {
@@ -101,10 +103,10 @@
                                                 var message = groupedMessages[i];
                                                 var isFirstInGroup = i == 0 || groupedMessages[i - 1].SenderUserName != message.SenderUserName;
                                                 
-                                                <div class="d-flex @(message.IsCurrentUser ? "flex-row-reverse" : "flex-row")" style="margin-bottom: 12px;">
+                                                <div class="d-flex @(message.IsCurrentUser ? "flex-row-reverse" : "flex-row") message-group" style="margin-bottom: 12px;">
                                                     @if (isFirstInGroup && !message.IsCurrentUser)
                                                     {
-                                                        <MudAvatar Color="Color.Secondary" Class="mr-2 mt-1" Size="Size.Small" Style="background-color: var(--mud-palette-secondary); color: white;">
+                                                        <MudAvatar Color="Color.Primary" Class="mr-2 mt-1" Size="Size.Small" Style="color: white;">
                                                             @message.SenderUserName[0]
                                                         </MudAvatar>
                                                     }
@@ -112,35 +114,48 @@
                                                     {
                                                         <div style="width: 40px;"></div>
                                                     }
-
                                                     <div class="d-flex flex-column @(message.IsCurrentUser ? "align-end" : "align-start")" style="max-width: 80%;">
-                                                        @if (isFirstInGroup && !message.IsCurrentUser)
-                                                        {
-                                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1 ml-1">@message.SenderFullName</MudText>
-                                                        }
-                                                        
+                                                        <div class="d-flex justify-space-between">
+                                                            @if (isFirstInGroup && !message.IsCurrentUser)
+                                                            {
+                                                                <MudText Typo="Typo.caption" Color="Color.Primary" Class="mb-1 ml-1">@message.SenderFullName</MudText>
+                                                            }
+                                                        </div>
                                                         <MudPaper Elevation="1" 
-                                                                Class="@($"pa-3 rounded-lg position-relative {(message.IsCurrentUser ? "mud-theme-primary" : "mud-theme-tertiary")}")"
+                                                                Class="@($"pa-3 message-bubble {(message.IsCurrentUser ? "current-user-message" : "other-user-message")}")"
                                                                 Style="@($"{(message.IsCurrentUser ? "border-top-right-radius: 4px;" : "border-top-left-radius: 4px;")} min-width: 120px;")">
                                                             
                                                             <!-- Message content -->
-                                                            <MudText Style="@(message.IsCurrentUser ? "color: white" : "color: #273F4F")">@message.Content</MudText>
+                                                            <MudText Class="message-content">@message.Content</MudText>
                                                             
                                                             <!-- Time and sentiment badge -->
-                                                            <div class="d-flex justify-end align-center mt-1">
-                                                                <MudText Typo="Typo.caption" Style="@(message.IsCurrentUser ? "color: white; opacity: 0.8;" : "color: #273F4F; opacity: 0.8;")" Class="mr-1">
+                                                            <div class="d-flex justify-space-between align-center mt-1 message-meta">
+                                                                <MudText Typo="Typo.caption" Class="mr-1 time-indicator">
                                                                     @message.SentAt.ToString("t")
                                                                 </MudText>
-                                                                
-                                                                @if (!string.IsNullOrEmpty(message.SentimentLabel))
-                                                                {
-                                                                    <MudIcon Icon="@GetSentimentIcon(message.SentimentLabel)" 
-                                                                            Color="@GetSentimentColor(message.SentimentLabel)" 
-                                                                            Size="Size.Small" />
-                                                                }
                                                             </div>
                                                         </MudPaper>
                                                     </div>
+                                                    @if (!string.IsNullOrEmpty(message.SentimentLabel))
+                                                    {
+                                                        if (isFirstInGroup && !message.IsCurrentUser)
+                                                        {
+                                                            <div style="padding: 10px; padding-top: 35px;">
+                                                                <MudIcon Icon="@GetSentimentIcon(message.SentimentLabel)" 
+                                                                    Color="@GetSentimentColor(message.SentimentLabel)" 
+                                                                    Size="Size.Small" />
+                                                            </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div style="padding: 10px; padding-top: 15px;">
+                                                                <MudIcon Icon="@GetSentimentIcon(message.SentimentLabel)" 
+                                                                    Color="@GetSentimentColor(message.SentimentLabel)" 
+                                                                    Size="Size.Small" />
+                                                            </div>
+                                                        }
+                                                            
+                                                    }
                                                 </div>
                                             }
                                         }
@@ -149,7 +164,7 @@
                             </MudPaper>
 
                             <!-- Message Input - Fixed to the bottom -->
-                            <MudAppBar Color="Color.Primary" Elevation="3" Class="py-3 px-4" Bottom Fixed="true" Style="border-top: 1px solid var(--mud-palette-lines-default);">
+                            <MudAppBar Color="Color.Surface" Elevation="3" Class="py-3 px-4 message-input-container" Bottom Fixed="true" Style="border-top: 1px solid var(--mud-palette-divider);">
                                 <MudGrid Spacing="2" Class="ma-0 pa-0">
                                     <MudItem xs="10" sm="11">
                                         <MudTextField @ref="_messageInputRef"
@@ -162,7 +177,6 @@
                                             Disabled="@(!ChatHubService.IsConnected || _selectedChatRoom == null)"
                                             FullWidth="true"
                                             Class="message-input"
-                                            InputStyle="color: white !important;"
                                             AdornmentColor="Color.Secondary" />
                                     </MudItem>
                                     <MudItem xs="2" sm="1" Class="d-flex align-center justify-center">
@@ -187,8 +201,10 @@
 </AuthorizeView>
 
 <style>
+    /* Base styling */
     .message-input .mud-input-outlined-border {
-        border-color: var(--mud-palette-lines-default) !important;
+        border-color: var(--mud-palette-divider) !important;
+        border-radius: 12px !important;
     }
     
     .message-input .mud-input:hover:not(.mud-input-disabled) .mud-input-outlined-border {
@@ -200,16 +216,62 @@
         border-width: 2px !important;
     }
     
-    .mud-paper.mud-theme-tertiary {
-        background-color: white !important;
-        border: 1px solid var(--mud-palette-lines-default);
+    /* Message bubbles styling */
+    .message-bubble {
+        border-radius: 12px !important;
+        transition: all 0.2s ease;
     }
     
-    .mud-paper.mud-theme-primary {
+    .message-bubble:hover {
+        box-shadow: var(--mud-elevation-3);
+    }
+    
+    .other-user-message {
+        background-color: var(--mud-palette-surface) !important;
+        color: var(--mud-palette-text-primary) !important;
+        border: 1px solid var(--mud-palette-divider);
+    }
+    
+    .current-user-message {
         background-color: var(--mud-palette-primary) !important;
         color: white !important;
     }
+    
+    .current-user-message .time-indicator {
+        color: rgba(255, 255, 255, 0.8) !important;
+    }
+    
+    .other-user-message .time-indicator {
+        color: var(--mud-palette-text-secondary) !important;
+    }
+    
+    /* Chat header styling */
+    .chat-header {
+        background-color: var(--mud-palette-surface) !important;
+    }
+    
+    /* Typing indicator styling */
+    .typing-indicator {
+        color: var(--mud-palette-secondary) !important;
+        font-style: italic;
+    }
+    
+    /* Empty state styling */
+    .empty-state {
+        opacity: 0.8;
+    }
+    
+    /* Message input container */
+    .message-input-container {
+        background-color: var(--mud-palette-surface) !important;
+    }
+    
+    /* Send button - hide text on mobile */
     @@media (max-width: 600px) {
+        .send-button ::deep .mud-button-label span {
+            display: none;
+        }
+        
         .message-input {
             min-width: 0;
             width: 100%;
@@ -218,6 +280,12 @@
         .mud-grid-item.xs-10 {
             padding-right: 8px;
         }
+    }
+    
+    /* Dark mode specific adjustments */
+    :root[data-mud-palette-mode='dark'] .other-user-message {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid var(--mud-palette-divider);
     }
 </style>
 

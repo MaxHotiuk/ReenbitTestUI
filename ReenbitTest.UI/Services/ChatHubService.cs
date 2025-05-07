@@ -103,25 +103,21 @@ namespace ReenbitTest.UI.Services
 
             _hubConnection.On<Message>("ReceiveMessage", message => 
             {
-                _logger.LogInformation($"Message received from {message.SenderUserName}");
                 OnReceiveMessage.Invoke(message);
             });
 
             _hubConnection.On<List<Message>>("LoadRecentMessages", messages => 
             {
-                _logger.LogInformation($"Loaded {messages.Count} recent messages");
                 OnLoadRecentMessages.Invoke(messages);
             });
 
             _hubConnection.On<UserTypingInfo>("UserTyping", typingInfo => 
             {
-                _logger.LogInformation($"User typing: {typingInfo.UserName}");
                 OnUserTyping.Invoke(typingInfo);
             });
 
             _hubConnection.On<UserTypingInfo>("UserStoppedTyping", typingInfo => 
             {
-                _logger.LogInformation($"User stopped typing: {typingInfo.UserName}");
                 OnUserStoppedTyping.Invoke(typingInfo);
             });
 
@@ -162,13 +158,11 @@ namespace ReenbitTest.UI.Services
 
             _hubConnection.On<int>("JoinedChatRoom", chatRoomId => 
             {
-                _logger.LogInformation($"Joined chat room {chatRoomId}");
                 OnJoinedChatRoom.Invoke(chatRoomId);
             });
 
             _hubConnection.On<int>("LeftChatRoom", chatRoomId => 
             {
-                _logger.LogInformation($"Left chat room {chatRoomId}");
                 OnLeftChatRoom.Invoke(chatRoomId);
             });
 
