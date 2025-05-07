@@ -24,7 +24,8 @@ else
     <MudSnackbarProvider />
     <MudLayout>
         <!-- Mobile Top AppBar - Only visible on screens smaller than md -->
-        <MudAppBar Elevation="1" Dense="true" Fixed="true" Class="d-flex d-md-none">
+        <MudAppBar Color="Color.Surface" Fixed="true" Dense="false" Elevation="2" Class="d-md-none flex-row align-center px-4 chat-header" 
+                                    Style="border-bottom: 1px solid var(--mud-palette-divider); cursor: pointer;">
             <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleNavbar" />
             <MudIcon Icon="@Icons.Material.Filled.Chat" Color="Color.Inherit" Size="Size.Medium" Class="ml-2" />
             <MudText Typo="Typo.h6" Class="ml-2">ReenbitTest</MudText>
@@ -101,6 +102,10 @@ else
         
         .mud-drawer-open.mud-drawer-left ~ .mud-main-content .content-container {
             margin-left: 280px;
+        }
+        
+        .chat-header {
+            background-color: var(--mud-palette-surface) !important;
         }
     }
 </style>
