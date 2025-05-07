@@ -55,26 +55,28 @@
                             </MudAvatar>
                         </div>
                         <div class="d-flex flex-column w-100 py-1">
-                            <div class="d-flex justify-space-between align-center">
-                                <MudText Typo="Typo.body2" Class="mud-text-truncate chat-name">
-                                    @chat.Name
-                                </MudText>
-                                @if (chat.UnreadCount > 0)
-                                {
-                                    <MudBadge Color="Color.Secondary" 
-                                            Content="@chat.UnreadCount" 
-                                            Overlap="true" 
-                                            Max="99" 
-                                            Class="unread-badge">
-                                    </MudBadge>
+                            <div style="min-width: 200px;">
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.body2" Class="mud-text-truncate chat-name">
+                                        @chat.Name
+                                    </MudText>
+                                    @if (chat.UnreadCount > 0)
+                                    {
+                                        <MudBadge Color="Color.Secondary" 
+                                                Content="@chat.UnreadCount" 
+                                                Overlap="true" 
+                                                Max="99" 
+                                                Class="unread-badge">
+                                        </MudBadge>
+                                    }
+                                </div>
+                                @{
+                                    var typingUsersInChat = _typingUsers.Where(t => t.ChatRoomId == chat.Id)
+                                                                    .Select(t => t.UserName)
+                                                                    .Distinct()
+                                                                    .ToList();
                                 }
                             </div>
-                            @{
-                                var typingUsersInChat = _typingUsers.Where(t => t.ChatRoomId == chat.Id)
-                                                                .Select(t => t.UserName)
-                                                                .Distinct()
-                                                                .ToList();
-                            }
                             
                             <MudText Typo="Typo.caption" Class="mud-text-truncate" Style="opacity: 0.7;">
                                 @if (typingUsersInChat.Count > 0)
