@@ -24,11 +24,10 @@ else
     <MudSnackbarProvider />
     <MudLayout>
         <!-- Mobile Top AppBar - Only visible on screens smaller than md -->
-        <MudAppBar Color="Color.Surface" Fixed="true" Dense="false" Elevation="2" Class="d-md-none flex-row align-center px-4 chat-header" 
+        <MudAppBar Color="Color.Primary" Fixed="true" Dense="false" Elevation="2" Class="d-md-none flex-row align-center px-4 chat-header" 
                                     Style="border-bottom: 1px solid var(--mud-palette-divider); cursor: pointer;">
-            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleNavbar" />
-            <MudIcon Icon="@Icons.Material.Filled.Chat" Color="Color.Inherit" Size="Size.Medium" Class="ml-2" />
-            <MudText Typo="Typo.h6" Class="ml-2">ReenbitTest</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Primary" Edge="Edge.Start" OnClick="@ToggleNavbar" />
+            <MudText Typo="Typo.h6" Color="Color.Primary" Class="ml-2">ReenbitTest</MudText>
         </MudAppBar>
         
         <!-- Left Drawer - Always open on desktop, toggleable on smaller screens -->
@@ -286,7 +285,7 @@ else
     private readonly PaletteDark _darkPalette = new()
     {
         // Main colors
-        Primary = "#273F4F",          // Dark blue (same as light theme)
+        Primary = "#2f4d61",          // Dark blue (same as light theme)
         Secondary = "#FE7743",        // Orange as secondary accent
         Tertiary = "#EFEEEA",         // Light cream
         
@@ -297,12 +296,12 @@ else
         
         // Appbar
         AppbarText = "#FFFFFF",       // White text
-        AppbarBackground = "#273F4F", // Dark blue background
+        AppbarBackground = "#2f4d61", // Dark blue background
         
         // Drawer
         DrawerBackground = "#000000", // Black
         DrawerText = "#FFFFFF",       // White text
-        DrawerIcon = "#273F4F",       // Dark blue for icons
+        DrawerIcon = "#2f4d61",       // Dark blue for icons
         
         // Text colors
         TextPrimary = "#FFFFFF",      // White

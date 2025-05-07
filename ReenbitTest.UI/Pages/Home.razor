@@ -31,15 +31,15 @@
                     else
                     {
                         <MudPaper Elevation="0" Class="d-flex flex-column h-100" Style="background-color: var(--mud-palette-background);">
-                            <MudAppBar Color="Color.Surface" Fixed="true" Dense="false" Elevation="2" Class="flex-row align-center px-4 chat-header" 
+                            <MudAppBar Color="Color.Surface" Fixed="true" Dense="false" Elevation="2" Class="chat-header" 
                                     Style="border-bottom: 1px solid var(--mud-palette-divider); cursor: pointer;"
                                     @onclick="OpenAddUserDialog">
                                 <!-- Mobile menu drawer button -->
                                 <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Primary" Edge="Edge.Start" 
-                                            OnClick="@((e) => { ToggleNavbar(); })" 
-                                            Class="mr-3 d-md-none" />
-                                
-                                <div class="d-flex flex-column flex-grow-1" style="text-align: left;">
+                                                    OnClick="@((e) => { ToggleNavbar(); })" 
+                                                    Class="mr-3 d-md-none" />
+                                <MudSpacer />
+                                <div class="d-flex flex-column flex-grow-1" style="text-align: center;">
                                     @if (_isLoadingMessages)
                                     {
                                         <MudText Typo="Typo.h6" Color="Color.Primary">
@@ -69,6 +69,13 @@
                                         }
                                     }
                                 </div>
+                                <MudSpacer />
+                                <MudAvatar Color="Color.Primary" Class="mr-2 mt-1" Size="Size.Medium">
+                                    @if (_selectedChatRoom != null)
+                                    {
+                                        @(_selectedChatRoom.Name[0])
+                                    }
+                                </MudAvatar>
                             </MudAppBar>
                             
                             <!-- Spacer to account for fixed AppBar -->
@@ -185,7 +192,7 @@
                                                     Icon="@Icons.Material.Filled.Send"
                                                     OnClick="SendMessage"
                                                     Disabled="@(string.IsNullOrWhiteSpace(_newMessage) || !ChatHubService.IsConnected || _selectedChatRoom == null)"
-                                                    Style="background-color: var(--mud-palette-secondary); color: white;" />
+                                                    Style="background-color: var(--mud-palette-secondary); color: white !important;" />
                                     </MudItem>
                                 </MudGrid>
                             </MudAppBar>
