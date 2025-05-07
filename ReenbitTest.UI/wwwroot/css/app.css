@@ -69,3 +69,46 @@
 .loading-progress-text {
     display: none;
 }
+
+/* Add these styles to your existing style section */
+
+/* Adjustments for when keyboard is open */
+body.keyboard-open .mud-container {
+    height: auto !important;
+    min-height: 100vh;
+}
+
+body.keyboard-open .mud-paper.d-flex.flex-row.h-100 {
+    height: auto !important;
+    min-height: 100vh;
+}
+
+body.keyboard-open #messages-container {
+    /* Allow messages to scroll but maintain enough space for input */
+    height: auto !important;
+    max-height: calc(100vh - 140px);
+    margin-bottom: 76px !important;
+}
+
+/* Ensure the fixed position input stays at the bottom */
+body.keyboard-open .mud-appbar.mud-appbar-bottom.mud-appbar-fixed {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    z-index: 1300;
+}
+
+/* Additional mobile responsive fixes */
+@media (max-width: 600px) {
+    #messages-container {
+        padding: 8px !important; /* Reduce padding on small screens */
+    }
+    
+    .mud-appbar.mud-appbar-bottom {
+        padding: 8px !important;
+    }
+    
+    .mud-container.mud-container-maxwidth-lg {
+        padding: 0 !important;
+    }
+}

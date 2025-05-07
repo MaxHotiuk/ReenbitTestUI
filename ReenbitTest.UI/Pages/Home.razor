@@ -13,6 +13,7 @@
 @inject ISnackbar Snackbar
 @inject ReenbitTest.UI.Services.NavbarEventService NavbarEventService
 @inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
 <AuthorizeView>
@@ -238,6 +239,7 @@
     private int _currentPage = 1;
     private const int PageSize = 20;
     private bool _allMessagesLoaded = false;
+    private IJSObjectReference? _keyboardModule;
 
     protected override async Task OnInitializedAsync()
     {
@@ -257,9 +259,23 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && AuthService.IsAuthenticated && !_connectionInitialized)
+        if (firstRender)
         {
-            await InitializeHubConnection();
+            // Initialize your existing code...
+            if (AuthService.IsAuthenticated && !_connectionInitialized)
+            {
+                await InitializeHubConnection();
+            }
+            
+            // Add keyboard handling initialization
+            try
+            {
+                _keyboardModule = await JSRuntime.InvokeAsync<IJSObjectReference>("keyboardFunctions.initialize");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing keyboard handling: {ex.Message}");
+            }
         }
 
         await ScrollToBottomAsync();
@@ -678,6 +694,19 @@
             {
                 await ChatHubService.LeaveChatRoomAsync(_selectedChatRoom.Id);
             }
+        }
+
+        try
+        {
+            if (_keyboardModule != null)
+            {
+                await JSRuntime.InvokeVoidAsync("keyboardFunctions.cleanup");
+                await _keyboardModule.DisposeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cleaning up keyboard handling: {ex.Message}");
         }
     }
 
