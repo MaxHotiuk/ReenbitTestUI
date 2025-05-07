@@ -24,5 +24,6 @@ namespace ReenbitTest.UI.Interfaces
         Task NotifyUserStoppedTypingAsync(int chatRoomId);
         Task<ConnectionInfo> GetConnectionInfoAsync();
         Task SendHeartbeatAsync();
+        void ResetConnectionState();
     }
 }

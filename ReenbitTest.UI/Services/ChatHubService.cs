@@ -80,7 +80,20 @@ namespace ReenbitTest.UI.Services
                 {
                     _logger.LogError($"Error stopping hub connection: {ex.Message}");
                 }
+                finally
+                {
+                    // Ensure connection is null even if an exception occurred
+                    _hubConnection = null;
+                }
             }
+        }
+
+        public void ResetConnectionState()
+        {
+            _hubConnection = null;
+            _heartbeatTimer?.Dispose();
+            _heartbeatTimer = null;
+            _logger.LogInformation("Connection state has been reset");
         }
 
         private void RegisterHandlers()

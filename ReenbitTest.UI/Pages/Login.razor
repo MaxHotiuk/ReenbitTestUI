@@ -4,6 +4,7 @@
 @inject IAuthService AuthService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IChatHubService ChatHubService
 
 <PageTitle>Login</PageTitle>
 
@@ -83,6 +84,7 @@
             if (result.Success)
             {
                 Snackbar.Add("Logged in successfully!", Severity.Success);
+                ChatHubService.ResetConnectionState();
                 NavigationManager.NavigateTo("/");
             }
             else

@@ -13,17 +13,20 @@ namespace ReenbitTest.UI.Services
         private readonly HttpClient _httpClient;
         private readonly ILocalStorageService _localStorage;
         private readonly AuthenticationStateProvider _authStateProvider;
+        private readonly IChatHubService _chatHubService;
         private readonly string _authTokenKey = "authToken";
         private readonly string _userKey = "currentUser";
 
         public AuthService(
             HttpClient httpClient,
             ILocalStorageService localStorage,
-            AuthenticationStateProvider authStateProvider)
+            AuthenticationStateProvider authStateProvider,
+            IChatHubService chatHubService)
         {
             _httpClient = httpClient;
             _localStorage = localStorage;
             _authStateProvider = authStateProvider;
+            _chatHubService = chatHubService;
         }
 
         public string? AuthToken { get; private set; }
@@ -76,6 +79,21 @@ namespace ReenbitTest.UI.Services
 
         public async Task Logout()
         {
+            // Stop the SignalR connection before clearing auth data
+            try 
+            {
+                // Get the ChatHubService from DI (you'll need to add this as a property or parameter)
+                if (_chatHubService != null && _chatHubService.IsConnected)
+                {
+                    await _chatHubService.StopConnectionAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but continue with logout
+                Console.WriteLine($"Error disconnecting from chat hub: {ex.Message}");
+            }
+
             await _localStorage.RemoveItemAsync(_authTokenKey);
             await _localStorage.RemoveItemAsync(_userKey);
             

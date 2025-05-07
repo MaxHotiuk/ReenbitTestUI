@@ -124,6 +124,12 @@
         _ = JoinChatRoomsInBackgroundAsync();
     }
 
+    protected override void OnInitialized()
+    {
+        AuthenticationStateProvider.AuthenticationStateChanged += AuthStateChanged;
+        base.OnInitialized();
+    }
+
     private async Task JoinChatRoomsInBackgroundAsync()
     {
         try
@@ -152,6 +158,12 @@
     {
         try
         {
+            // Check if there's an existing connection and stop it first
+            if (ChatHubService.IsConnected)
+            {
+                await ChatHubService.StopConnectionAsync();
+            }
+            
             var token = await AuthService.GetTokenAsync();
             if (string.IsNullOrEmpty(token))
                 return;
@@ -347,6 +359,28 @@
         await SelectChat(chatRoom);
     }
 
+    private async void AuthStateChanged(Task<AuthenticationState> task)
+    {
+        var authState = await task;
+        var isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        
+        if (isAuthenticated)
+        {
+            // User just logged in
+            await LoadChatRooms();
+            await InitializeHubConnection();
+        }
+        else
+        {
+            // User logged out
+            _chatRooms.Clear();
+            _selectedChatId = null;
+            _connectionInitialized = false;
+        }
+        
+        await InvokeAsync(StateHasChanged);
+    }
+
     public ValueTask DisposeAsync()
     {
         _typingTimer?.Dispose();
@@ -358,7 +392,13 @@
             ChatHubService.OnUserStoppedTyping -= HandleUserStoppedTyping;
             ChatHubService.OnError -= HandleError;
         }
+        
+        // Unsubscribe from auth state changes
+        AuthenticationStateProvider.AuthenticationStateChanged -= AuthStateChanged;
 
         return ValueTask.CompletedTask;
     }
+
+    [Inject]
+    private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = null!;
 }
