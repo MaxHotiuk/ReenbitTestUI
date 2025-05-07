@@ -10,7 +10,7 @@
 @inject ReenbitTest.UI.Services.NavbarEventService NavbarEventService
 
 <MudPaper Class="d-flex flex-column h-100" Elevation="0" Square="true">
-    <MudToolBar Dense="true" DisableGutters="true" Class="px-2">
+    <MudToolBar Dense="true" Class="px-2">
         <MudText Typo="Typo.subtitle1" Class="mud-text-truncate">Chats</MudText>
         <MudSpacer />
         <MudTooltip Text="New Chat">
@@ -39,7 +39,7 @@
     }
     else
     {
-        <MudList T="string" Clickable="true" DisablePadding="true" Class="overflow-y-auto flex-grow-1 pa-0">
+        <MudList T="string" Class="overflow-y-auto flex-grow-1 pa-0">
             @foreach (var chat in _chatRooms)
             {
                 <MudListItem OnClick="@(() => SelectChat(chat))" 
@@ -47,7 +47,7 @@
                             Dense="true">
                     <div class="d-flex flex-row">
                         <div class="d-flex flex-column w-100 py-1">
-                            <MudAvatar Icon="@Icons.Material.Filled.Chat" 
+                            <MudAvatar
                                     Color="Color.Primary" 
                                     Size="Size.Medium" 
                                     Class="mr-2" >
