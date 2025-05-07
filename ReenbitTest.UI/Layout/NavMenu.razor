@@ -1,6 +1,8 @@
 ﻿@using ReenbitTest.UI.Interfaces
 @inject NavigationManager NavigationManager
 @inject IAuthService AuthService
+@inject ReenbitTest.UI.Services.NavbarEventService NavbarEventService
+@inject IJSRuntime JSRuntime
 
 <div class="nav-container d-flex flex-column h-100">
     <AuthorizeView>
@@ -58,6 +60,7 @@
                             <MudIconButton Icon="fas fa-sign-in-alt" 
                                 Color="Color.Primary" 
                                 Href="/login"
+                                OnClick="CloseNavMenu"
                                 Class="flex-1" />
                         </MudTooltip>
                         
@@ -65,6 +68,7 @@
                             <MudIconButton Icon="fas fa-user-plus" 
                                 Color="Color.Primary" 
                                 Href="/register"
+                                OnClick="CloseNavMenu"
                                 Class="flex-1" />
                         </MudTooltip>
                         
@@ -119,6 +123,8 @@
     {
         await IsDarkModeChanged.InvokeAsync(!_isDarkMode);
     }
+
+
     
     private async Task LogoutUser()
     {
@@ -129,6 +135,29 @@
     {
         ActiveSection = section;
         await ActiveSectionChanged.InvokeAsync(section);
+    }
+
+    private async Task CloseNavMenu()
+    {
+        if (await IsSmallScreenAsync())
+        {
+            NavbarEventService.ToggleNavbar();
+        }
+    }
+
+    private async Task<bool> IsSmallScreenAsync()
+    {
+        try
+        {
+            // Check if current width is less than 600px (typical small screen breakpoint)
+            var windowWidth = await JSRuntime.InvokeAsync<int>("getWindowWidth");
+            return windowWidth < 960;
+        }
+        catch
+        {
+            // Fallback if JS interop fails
+            return false;
+        }
     }
 
     public enum NavSection
