@@ -13,8 +13,8 @@
     }
     else
     {
-        <MudPaper Elevation="0" Class="pa-2 pa-sm-4" Style="background-color: var(--mud-palette-background);">
-            <div class="profile-avatar-section d-flex justify-center text-center">
+        <MudPaper Elevation="0" Class="pa-2 pa-sm-4">
+            <div class="profile-avatar-section d-flex justify-center text-center" style="padding: 20px;">
                 <MudAvatar Color="Color.Primary" Size="Size.Large" Style="width: 100px; height: 100px; font-size: 2rem;" Class="mb-2">
                     @_userInitials
                 </MudAvatar>
@@ -24,20 +24,21 @@
                     <div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-4 gap-2">
                         <MudText Typo="Typo.h5" Class="mb-2 mb-sm-0">@_user?.FirstName @_user?.LastName</MudText>
                         <MudButton Variant="Variant.Filled" 
-                                  Color="Color.Primary" 
+                                  Color="Color.Secondary"
                                   EndIcon="@Icons.Material.Filled.Edit"
                                   Size="Size.Small"
                                   OnClick="@(() => UpdateProfile())">
+                            Edit
                         </MudButton>
                     </div>
                     <div class="profile-details">
                         <div class="profile-detail-item">
-                            <MudText Typo="Typo.body2" Color="Color.Tertiary">Username</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Username</MudText>
                             <MudText Typo="Typo.body1">@_user?.UserName</MudText>
                         </div>
                         
                         <div class="profile-detail-item">
-                            <MudText Typo="Typo.body2" Color="Color.Tertiary">Email</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Email</MudText>
                             <MudText Typo="Typo.body1">@_user?.Email</MudText>
                         </div>
                     </div>

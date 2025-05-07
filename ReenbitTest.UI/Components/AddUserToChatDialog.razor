@@ -5,17 +5,22 @@
 @inject IAuthService AuthService
 @inject ISnackbar Snackbar
 
-<MudDialog DisableSidePadding="true" Class="chat-info-dialog">
+<MudDialog DisableSidePadding="true" Class="chat-info-dialog rounded-12">
+    <TitleContent>
+        <MudText Typo="Typo.h5" Class="px-4 pt-4 pb-2">Chat Information</MudText>
+    </TitleContent>
     <DialogContent>
         <MudGrid>
             <!-- Chat Participants -->
             <MudItem xs="12">
-                <MudPaper Elevation="0" Class="pa-4">
-                    <div class="d-flex justify-space-between align-center mb-3">
-                        <MudText Typo="Typo.h6">Participants (@_chatUsers.Count)</MudText>
-                        <MudButton Variant="Variant.Text" 
+                <MudPaper Elevation="0" Class="py-2 px-4">
+                    <div class="d-flex justify-space-between align-center mb-4">
+                        <MudText Typo="Typo.h6" Class="fw-bold">Participants (@_chatUsers.Count)</MudText>
+                        <MudButton Variant="Variant.Filled" 
                                   StartIcon="@Icons.Material.Filled.Add" 
-                                  Color="Color.Primary"
+                                  Color="Color.Secondary"
+                                  Size="Size.Small"
+                                  Class="rounded-pill px-3"
                                   OnClick="@ToggleAddUsers">
                             @(_showAddUsers ? "Cancel" : "Add Users")
                         </MudButton>
@@ -25,12 +30,12 @@
                     <MudPaper Elevation="0" Class="pa-0 mb-4" Style="max-height: 250px; overflow-y: auto;">
                         @foreach (var user in _chatUsers)
                         {
-                            <MudPaper Elevation="0" Class="pa-2 mb-2 d-flex justify-space-between align-center">
+                            <MudPaper Elevation="0" Class="pa-3 mb-2 d-flex justify-space-between align-center rounded-lg" Style="background-color: var(--mud-palette-tertiary);">
                                 <div class="d-flex align-center">
-                                    <MudAvatar Color="Color.Primary" Class="mr-3">@user.FullName[0]</MudAvatar>
+                                    <MudAvatar Color="Color.Secondary" Size="Size.Medium" Class="mr-3">@user.FullName[0]</MudAvatar>
                                     <div>
-                                        <MudText Typo="Typo.body1">@user.FullName</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@@@user.UserName</MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Primary" Class="fw-bold">@user.FullName</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Primary">@@@user.UserName</MudText>
                                     </div>
                                 </div>
                             </MudPaper>
@@ -40,22 +45,24 @@
                     <!-- Add Users Section -->
                     @if (_showAddUsers)
                     {
-                        <MudPaper Elevation="1" Class="pa-4 mb-4">
-                            <MudText Typo="Typo.h6" Class="mb-3">Add Users</MudText>
+                        <MudPaper Elevation="2" Class="pa-4 mb-4 rounded-lg" Style="border: 1px solid var(--mud-palette-tertiary);">
+                            <MudText Typo="Typo.h6" Class="mb-4 fw-bold" Color="Color.Primary">Add Users</MudText>
                             
                             <MudTextField @bind-Value="_searchQuery"
                                          Label="Search users"
+                                         Variant="Variant.Outlined"
                                          Adornment="Adornment.End"
                                          AdornmentIcon="@Icons.Material.Filled.Search"
+                                         AdornmentColor="Color.Secondary"
                                          Immediate="true"
                                          OnDebounceIntervalElapsed="SearchUsers"
                                          DebounceInterval="300"
-                                         Class="mb-4" />
+                                         Class="mb-4 rounded-lg" />
 
                             @if (_isSearching)
                             {
                                 <div class="d-flex justify-center my-4">
-                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                    <MudProgressCircular Size="Size.Medium" Color="Color.Secondary" Indeterminate="true" />
                                 </div>
                             }
                             else if (_searchResults.Any())
@@ -63,22 +70,23 @@
                                 <MudPaper Elevation="0" Class="pa-0" Style="max-height: 200px; overflow-y: auto;">
                                     @foreach (var user in _searchResults)
                                     {
-                                        <MudPaper Elevation="0" Class="pa-2 mb-2 d-flex justify-space-between align-center">
+                                        <MudPaper Elevation="0" Class="pa-3 mb-2 d-flex justify-space-between align-center rounded-lg" Style="background-color: var(--mud-palette-tertiary);">
                                             <div class="d-flex align-center">
-                                                <MudAvatar Color="Color.Secondary" Class="mr-3">@user.FullName[0]</MudAvatar>
+                                                <MudAvatar Color="Color.Secondary" Size="Size.Medium" Class="mr-3">@user.FullName[0]</MudAvatar>
                                                 <div>
-                                                    <MudText Typo="Typo.body1">@user.FullName</MudText>
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@@@user.UserName</MudText>
+                                                    <MudText Typo="Typo.body1" Color="Color.Primary" Class="fw-bold">@user.FullName</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Primary">@@@user.UserName</MudText>
                                                 </div>
                                             </div>
-                                            <MudButton Color="Color.Primary"
+                                            <MudButton Color="Color.Secondary"
                                                       Size="Size.Small"
                                                       Variant="Variant.Filled"
+                                                      Class="rounded-pill px-3"
                                                       Disabled="@_isAdding"
                                                       OnClick="() => AddUserToChat(user)">
                                                 @if (_isAdding && _currentlyAddingUserId == user.Id)
                                                 {
-                                                    <MudProgressCircular Class="mr-1" Size="Size.Small" Indeterminate="true" />
+                                                    <MudProgressCircular Class="mr-2" Size="Size.Small" Color="Color.Tertiary" Indeterminate="true" />
                                                     <span>Adding...</span>
                                                 }
                                                 else
@@ -92,7 +100,10 @@
                             }
                             else if (!string.IsNullOrEmpty(_searchQuery))
                             {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">No users found</MudText>
+                                <div class="d-flex flex-column align-center py-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.SearchOff" Color="Color.Secondary" Size="Size.Large" Class="mb-2" />
+                                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="text-center">No users found</MudText>
+                                </div>
                             }
                         </MudPaper>
                     }
@@ -105,7 +116,49 @@
 <style>
     .chat-info-dialog {
         min-width: 500px;
-        max-width: 90vw;
+        max-width: 600px;
+        max-height: 90vh;
+    }
+
+    .rounded-12 {
+        border-radius: 12px !important;
+    }
+
+    .rounded-lg {
+        border-radius: 8px !important;
+    }
+
+    .rounded-pill {
+        border-radius: 50px !important;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--mud-palette-tertiary-lighten);
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--mud-palette-primary-lighten);
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--mud-palette-primary);
+    }
+
+    /* Typography enhancement */
+    .fw-bold {
+        font-weight: 600 !important;
+    }
+
+    /* Dark mode considerations */
+    :root[data-mud-theme="dark"] .mud-dialog {
+        background-color: var(--mud-palette-background-dark);
     }
 </style>
 

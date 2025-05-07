@@ -5,92 +5,125 @@
 @inject IAuthService AuthService
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<MudDialog ClassContent="pa-4" Style="border-radius: 12px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">Create New Chat</MudText>
+    </TitleContent>
     <DialogContent>
         <MudForm @ref="_form" @bind-IsValid="@_isFormValid">
             <MudTextField @bind-Value="_chatName" 
                          Label="Chat Name" 
                          Required="true" 
                          RequiredError="Chat name is required"
-                         Class="mb-3" />
+                         Variant="Variant.Outlined"
+                         Class="mb-4" 
+                         FullWidth="true"
+                         Adornment="Adornment.Start"
+                         AdornmentIcon="@Icons.Material.Filled.Chat"
+                         AdornmentColor="Color.Primary" />
             
-            <div class="d-flex flex-column gap-2">
-                <MudText Typo="Typo.subtitle2">Add Participants</MudText>
+            <MudCard Elevation="0" Outlined="true" Class="mb-4 pa-3" Style="border-radius: 12px; background-color: var(--mud-palette-background-grey);">
+                <MudCardHeader Class="pa-0 pb-2">
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">Add Participants</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
                 
-                <div class="d-flex gap-2">
-                    <MudTextField @bind-Value="_searchQuery"
-                                 Label="Search users"
-                                 Adornment="Adornment.End"
-                                 AdornmentIcon="@Icons.Material.Filled.Search"
-                                 Immediate="true"
-                                 OnDebounceIntervalElapsed="SearchUsers"
-                                 DebounceInterval="300"
-                                 Class="flex-grow-1" />
-                </div>
-
-                @if (_isSearching)
-                {
-                    <div class="d-flex justify-center my-2">
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <MudCardContent Class="pa-0">
+                    <div class="d-flex gap-2 mb-3">
+                        <MudTextField @bind-Value="_searchQuery"
+                                     Label="Search users"
+                                     Adornment="Adornment.End"
+                                     AdornmentIcon="@Icons.Material.Filled.Search"
+                                     AdornmentColor="Color.Secondary"
+                                     Immediate="true"
+                                     OnDebounceIntervalElapsed="SearchUsers"
+                                     DebounceInterval="300"
+                                     Variant="Variant.Outlined"
+                                     Class="flex-grow-1" />
                     </div>
-                }
-                else if (_searchResults.Any())
-                {
-                    <MudPaper Elevation="0" Class="pa-2" Style="max-height: 200px; overflow-y: auto;">
-                        @foreach (var user in _searchResults)
-                        {
-                            <MudPaper Elevation="1" Class="pa-2 mb-2">
-                                <div class="d-flex justify-space-between align-center">
-                                    <MudText>@user.FullName</MudText>
-                                    <MudIconButton Icon="@Icons.Material.Filled.Add" 
-                                                  Size="Size.Small"
-                                                  Color="Color.Primary"
-                                                  OnClick="() => AddUserToParticipants(user)" />
-                                </div>
-                            </MudPaper>
-                        }
-                    </MudPaper>
-                }
-                else if (!string.IsNullOrEmpty(_searchQuery))
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">No users found</MudText>
-                }
-                
-                @if (_selectedParticipants.Any())
-                {
-                    <MudDivider Class="my-2" />
-                    <MudText Typo="Typo.subtitle2" Class="mt-2">Selected Participants (@_selectedParticipants.Count)</MudText>
+
+                    @if (_isSearching)
+                    {
+                        <div class="d-flex justify-center my-4">
+                            <MudProgressCircular Size="Size.Medium" Color="Color.Secondary" Indeterminate="true" />
+                        </div>
+                    }
+                    else if (_searchResults.Any())
+                    {
+                        <MudPaper Elevation="0" Class="pa-2 mb-3" Style="max-height: 200px; overflow-y: auto; border-radius: 8px;">
+                            @foreach (var user in _searchResults)
+                            {
+                                <MudPaper Elevation="2" Class="pa-3 mb-2" Style="border-radius: 8px;">
+                                    <div class="d-flex justify-space-between align-center">
+                                        <div class="d-flex align-center">
+                                            <MudAvatar Color="Color.Primary" Size="Size.Small" Class="mr-2">@user.FullName[0]</MudAvatar>
+                                            <MudText>@user.FullName</MudText>
+                                        </div>
+                                        <MudIconButton Icon="@Icons.Material.Filled.PersonAdd" 
+                                                      Size="Size.Small"
+                                                      Color="Color.Secondary"
+                                                      Variant="Variant.Filled"
+                                                      Class="ml-2"
+                                                      OnClick="() => AddUserToParticipants(user)" />
+                                    </div>
+                                </MudPaper>
+                            }
+                        </MudPaper>
+                    }
+                    else if (!string.IsNullOrEmpty(_searchQuery))
+                    {
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Filled" Class="mb-3" Style="border-radius: 8px;">
+                            No users found matching your search
+                        </MudAlert>
+                    }
                     
-                    <MudPaper Elevation="0" Class="pa-2" Style="max-height: 200px; overflow-y: auto;">
-                        @foreach (var participant in _selectedParticipants)
-                        {
-                            <MudPaper Elevation="1" Class="pa-2 mb-2">
-                                <div class="d-flex justify-space-between align-center">
-                                    <MudText>@participant.FullName</MudText>
-                                    <MudIconButton Icon="@Icons.Material.Filled.Close" 
-                                                  Size="Size.Small"
-                                                  Color="Color.Error"
-                                                  OnClick="() => RemoveUserFromParticipants(participant)" />
-                                </div>
-                            </MudPaper>
-                        }
-                    </MudPaper>
-                }
-            </div>
+                    @if (_selectedParticipants.Any())
+                    {
+                        <MudDivider Class="my-3" />
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.subtitle1" Color="Color.Primary">Selected Participants</MudText>
+                            <MudChip T="string" Color="Color.Secondary" Size="Size.Small">@_selectedParticipants.Count</MudChip>
+                        </div>
+                        
+                        <MudPaper Elevation="0" Class="pa-2" Style="max-height: 200px; overflow-y: auto; border-radius: 8px;">
+                            @foreach (var participant in _selectedParticipants)
+                            {
+                                <MudPaper Elevation="2" Class="pa-3 mb-2" Style="border-radius: 8px;">
+                                    <div class="d-flex justify-space-between align-center">
+                                        <div class="d-flex align-center">
+                                            <MudAvatar Color="Color.Secondary" Size="Size.Small" Class="mr-2">@participant.FullName[0]</MudAvatar>
+                                            <MudText>@participant.FullName</MudText>
+                                        </div>
+                                        <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" 
+                                                      Size="Size.Small"
+                                                      Color="Color.Error"
+                                                      Variant="Variant.Filled"
+                                                      Class="ml-2"
+                                                      OnClick="() => RemoveUserFromParticipants(participant)" />
+                                    </div>
+                                </MudPaper>
+                            }
+                        </MudPaper>
+                    }
+                </MudCardContent>
+            </MudCard>
         </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Primary" 
+        <MudButton Variant="Variant.Filled" 
+                  Color="Color.Secondary" 
+                  StartIcon="@Icons.Material.Filled.Add"
                   Disabled="@(!_isFormValid || _isCreating || !_selectedParticipants.Any())" 
                   OnClick="CreateChat">
             @if (_isCreating)
             {
-                <MudProgressCircular Class="mr-1" Size="Size.Small" Indeterminate="true" />
+                <MudProgressCircular Class="mr-2" Size="Size.Small" Color="Color.Surface" Indeterminate="true" />
                 <span>Creating...</span>
             }
             else
             {
-                <span>Create</span>
+                <span>Create Chat</span>
             }
         </MudButton>
     </DialogActions>
