@@ -141,7 +141,7 @@
         }
         catch (Exception ex)
         {
-            await InvokeAsync(() => Snackbar.Add($"Failed to join chat rooms: {ex.Message}", Severity.Warning));
+            Console.WriteLine($"Error joining chat rooms: {ex.Message}");
         }
     }
 
@@ -184,7 +184,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Connection error: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Error initializing hub connection: {ex.Message}");
         }
     }
 
@@ -248,7 +248,7 @@
 
     private void HandleError(string error)
     {
-        Snackbar.Add(error, Severity.Error);
+        Console.WriteLine($"Hub error: {error}");
     }
 
     private async Task LoadChatRooms()
@@ -262,7 +262,7 @@
         catch (Exception ex)
         {
             _isLoading = false;
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Error loading chat rooms: {ex.Message}");
         }
     }
 

@@ -129,6 +129,7 @@
     private async Task LogoutUser()
     {
         await OnLogout.InvokeAsync();
+        await CloseNavMenu();
     }
 
     private async Task ChangeActiveSection(NavSection section)

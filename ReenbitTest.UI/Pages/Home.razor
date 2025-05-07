@@ -293,7 +293,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Connection error: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Error initializing chat hub connection: {ex.Message}");
         }
     }
 
@@ -317,7 +317,7 @@
         catch (Exception ex)
         {
             _isLoadingMessages = false;
-            Snackbar.Add($"Error loading chat: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Error loading chat room: {ex.Message}");
         }
     }
 
@@ -343,7 +343,7 @@
         catch (Exception ex)
         {
             _isLoadingMessages = false;
-            Snackbar.Add($"Error loading messages: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Error loading messages: {ex.Message}");
         }
     }
 
