@@ -9,7 +9,7 @@
 @inject IJSRuntime JSRuntime
 @inject ReenbitTest.UI.Services.NavbarEventService NavbarEventService
 
-<MudPaper Class="d-flex flex-column h-100" Elevation="0" Square="true" Style="background-color: var(--mud-palette-background);">
+<MudPaper Class="d-flex flex-column h-100" Elevation="0" Square="true">
     <MudToolBar Dense="true" DisableGutters="true" Class="px-2">
         <MudText Typo="Typo.subtitle1" Class="mud-text-truncate">Chats</MudText>
         <MudSpacer />
@@ -137,7 +137,6 @@
             foreach (var chatRoom in _chatRooms)
             {
                 await ChatHubService.JoinChatRoomAsync(chatRoom.Id);
-                Console.WriteLine($"Joined chat room: {chatRoom.Name}");
             }
         }
         catch (Exception ex)

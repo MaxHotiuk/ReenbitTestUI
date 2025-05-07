@@ -209,7 +209,6 @@
             var newChatRoom = await ChatService.CreateChatRoomAsync(createChatRoom);
             
             await OnChatCreated.InvokeAsync(newChatRoom);
-            MudDialog.Close(DialogResult.Ok(newChatRoom));
         }
         catch (Exception ex)
         {

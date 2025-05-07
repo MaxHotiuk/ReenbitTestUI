@@ -197,7 +197,7 @@ namespace ReenbitTest.UI.Services
         public async Task LeaveChatRoomAsync(int chatRoomId)
         {
             if (_hubConnection == null)
-                throw new InvalidOperationException("Hub connection is not initialized");
+                return;
 
             try
             {

@@ -30,12 +30,15 @@
                     else
                     {
                         <MudPaper Elevation="0" Class="d-flex flex-column h-100" Style="background-color: var(--mud-palette-background);">
+                            <!-- Replace the current Chat Header with this version -->
                             <!-- Chat Header - Fixed to the top -->
-                            <MudAppBar Color="Color.Primary" Fixed="true" Dense="false" Elevation="1" Class="flex-row align-center px-4" Style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                            <MudAppBar Color="Color.Primary" Fixed="true" Dense="false" Elevation="1" Class="flex-row align-center px-4" 
+                                    Style="border-bottom: 1px solid var(--mud-palette-lines-default); cursor: pointer;"
+                                    @onclick="OpenAddUserDialog">
                                 <!-- Mobile menu drawer button -->
                                 <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" 
-                                    OnClick="@ToggleNavbar" 
-                                    Class="mr-3 d-md-none" />
+                                            OnClick="@((e) => { ToggleNavbar(); })" 
+                                            Class="mr-3 d-md-none" />
                                 
                                 <div class="d-flex flex-column flex-grow-1" style="text-align: left;">
                                     @if (_isLoadingMessages)
@@ -49,14 +52,10 @@
                                     }
                                     else
                                     {
-                                        <MudButton 
-                                            Typo="Typo.h3" 
-                                            Color="Color.Inherit" 
-                                            OnClick="OpenAddUserDialog" 
-                                            Style="color: white; text-transform: none; padding: 0; font-weight: 600; width: 100px; text-align: left;">
+                                        <MudText>
                                             @_selectedChatRoom.Name
-                                        </MudButton>
-                        
+                                        </MudText>
+
                                         @if (_typingUsers.Any())
                                         {
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
@@ -414,7 +413,6 @@
             
             try
             {
-                Console.WriteLine($"User typing in chat room: {_selectedChatRoom.Id}");
                 await ChatHubService.NotifyUserTypingAsync(_selectedChatRoom.Id);
                 
                 // Reset typing timer
@@ -441,7 +439,6 @@
             
             try
             {
-                Console.WriteLine($"User stopped typing in chat room: {_selectedChatRoom.Id}");
                 await ChatHubService.NotifyUserStoppedTypingAsync(_selectedChatRoom.Id);
             }
             catch (Exception ex)

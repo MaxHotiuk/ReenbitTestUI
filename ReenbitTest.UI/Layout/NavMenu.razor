@@ -3,10 +3,6 @@
 @inject IAuthService AuthService
 
 <div class="nav-container d-flex flex-column h-100">
-    <!-- App Logo and Title Section -->
-    <div class="d-flex flex-row align-center px-4 py-2">
-        <MudText Typo="Typo.h5" Color="Color.Primary" Class="ml-2" Style="padding-top: 10px;">ReenbitTest</MudText>
-    </div>
     <AuthorizeView>
         <Authorized>
             <ContentContainer ActiveSection="@ActiveSection" />
@@ -18,8 +14,6 @@
             </div>
         </NotAuthorized>
     </AuthorizeView>
-    
-    <MudDivider Class="my-2" />
     
     <!-- User and Theme Controls Section - Bottom -->
     <div class="mt-auto">
